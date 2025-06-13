@@ -5,7 +5,7 @@ import { z } from "zod";
 import { correctBanglaText, type CorrectBanglaTextInput, type CorrectBanglaTextOutput } from "@/ai/flows/correct-bangla-text";
 import { adjustTone as adjustToneFlow, type AdjustToneInput, type AdjustToneOutput } from "@/ai/flows/adjust-tone";
 import mammoth from "mammoth";
-import pdfParser from "pdf-parse"; // Changed import name for clarity, pdf-parse is typically used with a default-like import with esModuleInterop
+// Removed static import of pdf-parse: import pdfParser from "pdf-parse";
 
 // Schema for the form data validation coming from client (for handleCorrectText)
 // This schema is not directly used by Zod in handleCorrectText as FormData is handled manually.
@@ -51,7 +51,9 @@ export async function handleCorrectText(
         const { value } = await mammoth.extractRawText({ arrayBuffer });
         textToCorrect = value;
       } else if (fileInput.type === "application/pdf" || fileInput.name.endsWith(".pdf")) {
-        const data = await pdfParser(Buffer.from(arrayBuffer));
+        // Dynamically import pdf-parse
+        const pdf = (await import("pdf-parse")).default;
+        const data = await pdf(Buffer.from(arrayBuffer));
         textToCorrect = data.text;
       } else if (fileInput.type === "text/plain" || fileInput.name.endsWith(".txt")) {
         textToCorrect = Buffer.from(arrayBuffer).toString("utf-8");
