@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useRef, useActionState } from "react";
+import { useState, useEffect, useRef, useActionState, useTransition } from "react";
 // Removed useTransition as useActionState handles transitions for its action
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, Controller } from "react-hook-form";
@@ -56,7 +56,7 @@ export function BanglaSummarizerForm() {
     handleSummarizeText,
     initialFormState
   );
-  // Removed separate useTransition as useActionState's action handles it.
+  const [, startTransition] = useTransition();
 
   const summarizationForm = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -162,8 +162,10 @@ export function BanglaSummarizerForm() {
     
     setSummary(undefined);
     setProcessedSourceText(undefined);
-    // Call the action from useActionState directly. It handles transitions.
-    summarizeFormAction(formData);
+    
+    startTransition(() => {
+      summarizeFormAction(formData);
+    });
   };
 
 
