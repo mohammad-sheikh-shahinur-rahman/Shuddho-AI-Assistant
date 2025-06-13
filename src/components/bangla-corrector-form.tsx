@@ -6,7 +6,12 @@ import { useFormState, useFormStatus } from "react-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
-import { CorrectTextFormState, handleCorrectText } from "@/app/actions";
+import { 
+  CorrectTextFormState, 
+  handleCorrectText,
+  AdjustToneFormState,
+  handleAdjustTone
+} from "@/app/actions";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -16,7 +21,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { Input } from "@/components/ui/input"; // Keep, might be used in future
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -28,7 +33,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { Copy, Briefcase, Smile, Feather, AlertCircle, CheckCircle, Info, Sparkles } from "lucide-react";
+import { Copy, Briefcase, Smile, Feather, AlertCircle, CheckCircle, Info, Sparkles, Palette } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const formSchema = z.object({
@@ -37,6 +42,13 @@ const formSchema = z.object({
     required_error: "অনুগ্রহ করে একটি টোন নির্বাচন করুন।",
   }),
 });
+
+const adjustToneFormSchema = z.object({
+  newTone: z.enum(["Formal", "Friendly", "Poetic"], {
+    required_error: "অনুগ্রহ করে একটি নতুন টোন নির্বাচন করুন।",
+  }),
+});
+
 
 type ToneOption = {
   value: "Formal" | "Friendly" | "Poetic";
@@ -60,14 +72,30 @@ function SubmitButton() {
   );
 }
 
+function AdjustToneSubmitButton() {
+  const { pending } = useFormStatus();
+  return (
+    <Button type="submit" disabled={pending} className="w-full sm:w-auto bg-accent hover:bg-accent/90 text-accent-foreground">
+      {pending ? "লোড হচ্ছে..." : "টোন পরিবর্তন করুন"}
+      {!pending && <Palette className="ml-2 h-4 w-4" />}
+    </Button>
+  );
+}
+
 export function BanglaCorrectorForm() {
   const { toast } = useToast();
-  const [formState, formAction] = useFormState<CorrectTextFormState, FormData>(
+  
+  const [correctionFormState, correctionFormAction] = useFormState<CorrectTextFormState, FormData>(
     handleCorrectText,
     { message: "", error: undefined, result: undefined }
   );
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const [adjustToneFormState, adjustToneFormAction] = useFormState<AdjustToneFormState, FormData>(
+    handleAdjustTone,
+    { message: "", error: undefined, result: undefined }
+  );
+
+  const correctionForm = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       text: "",
@@ -75,39 +103,79 @@ export function BanglaCorrectorForm() {
     },
   });
 
+  const toneAdjustForm = useForm<z.infer<typeof adjustToneFormSchema>>({
+    resolver: zodResolver(adjustToneFormSchema),
+    defaultValues: {
+      newTone: "Friendly",
+    },
+  });
+
+  const [originalInputText, setOriginalInputText] = useState<string>("");
   const [correctedText, setCorrectedText] = useState<string | undefined>(undefined);
   const [explanation, setExplanation] = useState<string | undefined>(undefined);
   const [qualityScore, setQualityScore] = useState<number | undefined>(undefined);
+  const [toneAdjustedText, setToneAdjustedText] = useState<string | undefined>(undefined);
 
   useEffect(() => {
-    if (formState.result) {
-      setCorrectedText(formState.result.correctedText);
-      setExplanation(formState.result.explanation);
-      setQualityScore(formState.result.qualityScore);
-      form.reset({ text: formState.result.correctedText, tone: form.getValues("tone")}); // Optionally clear or update input text
+    if (correctionFormState.result) {
+      setCorrectedText(correctionFormState.result.correctedText);
+      setExplanation(correctionFormState.result.explanation);
+      setQualityScore(correctionFormState.result.qualityScore);
+      // Do not reset the form here if we want to allow tone adjustment of corrected text
+      // correctionForm.reset({ text: correctionFormState.result.correctedText, tone: correctionForm.getValues("tone")});
+      setToneAdjustedText(undefined); // Clear previous tone adjusted text
     }
-    if (formState.error) {
+    if (correctionFormState.error) {
        toast({
         variant: "destructive",
         title: "ত্রুটি",
-        description: formState.error,
+        description: correctionFormState.error,
       });
       setCorrectedText(undefined);
       setExplanation(undefined);
       setQualityScore(undefined);
+      setToneAdjustedText(undefined);
     }
-  }, [formState, form, toast]);
+  }, [correctionFormState, toast]);
 
-  const handleCopyToClipboard = (text: string | undefined) => {
+  useEffect(() => {
+    if (adjustToneFormState.result) {
+      setToneAdjustedText(adjustToneFormState.result.adjustedText);
+       toast({
+        title: "টোন পরিবর্তিত হয়েছে",
+        description: "আপনার লেখার টোন সফলভাবে পরিবর্তিত হয়েছে।",
+        action: <CheckCircle className="text-green-500" />,
+      });
+    }
+    if (adjustToneFormState.error) {
+      toast({
+        variant: "destructive",
+        title: "টোন পরিবর্তনে ত্রুটি",
+        description: adjustToneFormState.error,
+      });
+      setToneAdjustedText(undefined);
+    }
+  }, [adjustToneFormState, toast]);
+
+  const handleCopyToClipboard = (text: string | undefined, type: string) => {
     if (text) {
       navigator.clipboard.writeText(text);
       toast({
         title: "কপি হয়েছে",
-        description: "সংশোধিত লেখা ক্লিপবোর্ডে কপি করা হয়েছে।",
+        description: `${type} ক্লিপবোর্ডে কপি করা হয়েছে।`,
         action: <CheckCircle className="text-green-500" />,
       });
     }
   };
+  
+  const handleFormSubmit = (data: z.infer<typeof formSchema>) => {
+    setOriginalInputText(data.text); // Save original input
+    const formData = new FormData();
+    formData.append("text", data.text);
+    formData.append("tone", data.tone);
+    correctionFormAction(formData);
+  };
+
 
   return (
     <div className="space-y-8">
@@ -118,20 +186,20 @@ export function BanglaCorrectorForm() {
             নিচের বাক্সে আপনার বাংলা লেখা লিখুন এবং একটি টোন নির্বাচন করুন।
           </CardDescription>
         </CardHeader>
-        <form action={formAction} onSubmit={form.handleSubmit(() => {})} className="space-y-6">
+        <form onSubmit={correctionForm.handleSubmit(handleFormSubmit)} className="space-y-6">
            <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="text" className="font-body">আপনার লেখা</Label>
               <Textarea
                 id="text"
-                {...form.register("text")}
+                {...correctionForm.register("text")}
                 placeholder="এখানে আপনার বাংলা লেখা লিখুন..."
                 className="min-h-[150px] font-body text-base border-input focus:ring-primary"
                 rows={6}
               />
-              {form.formState.errors.text && (
+              {correctionForm.formState.errors.text && (
                 <p className="text-sm text-destructive font-body flex items-center">
-                  <AlertCircle className="mr-1 h-4 w-4" /> {form.formState.errors.text.message}
+                  <AlertCircle className="mr-1 h-4 w-4" /> {correctionForm.formState.errors.text.message}
                 </p>
               )}
             </div>
@@ -139,7 +207,7 @@ export function BanglaCorrectorForm() {
               <Label htmlFor="tone" className="font-body">লেখার ধরণ</Label>
               <Controller
                 name="tone"
-                control={form.control}
+                control={correctionForm.control}
                 render={({ field }) => (
                   <Select onValueChange={field.onChange} defaultValue={field.value} name={field.name}>
                     <SelectTrigger id="tone" className="w-full sm:w-[200px] font-body border-input focus:ring-primary">
@@ -161,9 +229,9 @@ export function BanglaCorrectorForm() {
                   </Select>
                 )}
               />
-              {form.formState.errors.tone && (
+              {correctionForm.formState.errors.tone && (
                 <p className="text-sm text-destructive font-body flex items-center">
-                   <AlertCircle className="mr-1 h-4 w-4" /> {form.formState.errors.tone.message}
+                   <AlertCircle className="mr-1 h-4 w-4" /> {correctionForm.formState.errors.tone.message}
                 </p>
               )}
             </div>
@@ -174,18 +242,18 @@ export function BanglaCorrectorForm() {
         </form>
       </Card>
 
-      { (formState.result || formState.error) && (
+      { (correctionFormState.result || correctionFormState.error) && (
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle className="font-headline text-2xl">ফলাফল</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            {formState.error && !formState.result && (
+            {correctionFormState.error && !correctionFormState.result && (
               <div className="text-destructive font-body p-4 border border-destructive bg-destructive/10 rounded-md flex items-start">
                 <AlertCircle className="mr-3 h-5 w-5 flex-shrink-0" />
                 <div>
                   <h3 className="font-semibold">একটি সমস্যা হয়েছে</h3>
-                  <p>{formState.error}</p>
+                  <p>{correctionFormState.error}</p>
                 </div>
               </div>
             )}
@@ -196,7 +264,7 @@ export function BanglaCorrectorForm() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => handleCopyToClipboard(correctedText)}
+                    onClick={() => handleCopyToClipboard(correctedText, "সংশোধিত লেখা")}
                     className="text-accent-foreground hover:bg-accent/80"
                   >
                     <Copy className="mr-2 h-4 w-4" />
@@ -234,6 +302,106 @@ export function BanglaCorrectorForm() {
           </CardContent>
         </Card>
       )}
+
+      {correctedText && !toneAdjustedText && (
+        <Card className="shadow-md mt-8">
+          <CardHeader>
+            <CardTitle className="font-headline text-xl flex items-center">
+              <Palette className="mr-2 h-6 w-6 text-accent-foreground" />
+              সংশোধিত লেখার টোন পরিবর্তন করুন
+            </CardTitle>
+            <CardDescription className="font-body">
+              আপনি যদি সংশোধিত লেখাটির টোন পরিবর্তন করতে চান, তবে নিচে থেকে নতুন টোন নির্বাচন করুন।
+            </CardDescription>
+          </CardHeader>
+          <form 
+            onSubmit={toneAdjustForm.handleSubmit((data) => {
+                const formData = new FormData();
+                formData.append("textToAdjust", correctedText); // Pass the corrected text
+                formData.append("newTone", data.newTone);
+                adjustToneFormAction(formData);
+            })}
+            className="space-y-6"
+          >
+            <CardContent className="space-y-4">
+              <input type="hidden" name="textToAdjust" value={correctedText} />
+              <div className="space-y-2">
+                <Label htmlFor="newTone" className="font-body">নতুন টোন</Label>
+                <Controller
+                  name="newTone"
+                  control={toneAdjustForm.control}
+                  render={({ field }) => (
+                    <Select onValueChange={field.onChange} defaultValue={field.value} name={field.name}>
+                      <SelectTrigger id="newTone" className="w-full sm:w-[200px] font-body border-input focus:ring-accent">
+                        <SelectValue placeholder="নতুন টোন নির্বাচন করুন" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {toneOptions.map((option) => {
+                          const Icon = option.icon;
+                          return (
+                            <SelectItem key={option.value} value={option.value} className="font-body">
+                              <div className="flex items-center">
+                                <Icon className="mr-2 h-4 w-4 text-muted-foreground" />
+                                {option.label}
+                              </div>
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                {toneAdjustForm.formState.errors.newTone && (
+                  <p className="text-sm text-destructive font-body flex items-center">
+                    <AlertCircle className="mr-1 h-4 w-4" /> {toneAdjustForm.formState.errors.newTone.message}
+                  </p>
+                )}
+              </div>
+            </CardContent>
+            <CardFooter>
+              <AdjustToneSubmitButton />
+            </CardFooter>
+          </form>
+        </Card>
+      )}
+
+      {toneAdjustedText && (
+         <Card className="shadow-lg mt-8">
+          <CardHeader>
+            <CardTitle className="font-headline text-xl">টোন পরিবর্তিত লেখা</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+             <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <Label htmlFor="toneAdjustedTextOutput" className="font-body text-lg">চূড়ান্ত লেখা (টোন পরিবর্তিত)</Label>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleCopyToClipboard(toneAdjustedText, "টোন পরিবর্তিত লেখা")}
+                    className="text-accent-foreground hover:bg-accent/80"
+                  >
+                    <Copy className="mr-2 h-4 w-4" />
+                    কপি করুন
+                  </Button>
+                </div>
+                <Textarea
+                  id="toneAdjustedTextOutput"
+                  value={toneAdjustedText}
+                  readOnly
+                  className="min-h-[150px] font-body text-base bg-muted/30 border-input"
+                  rows={6}
+                />
+              </div>
+              <Button variant="outline" onClick={() => {
+                setToneAdjustedText(undefined); // Clear adjusted text to allow re-adjustment or new correction
+                toneAdjustForm.reset(); // Reset tone adjustment form
+              }}>
+                অন্য টোন চেষ্টা করুন / নতুন সংশোধন করুন
+              </Button>
+          </CardContent>
+        </Card>
+      )}
+
     </div>
   );
 }
