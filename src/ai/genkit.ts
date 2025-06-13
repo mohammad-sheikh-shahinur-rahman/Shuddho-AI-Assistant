@@ -11,20 +11,23 @@ declare global {
 let ai: ReturnType<typeof genkit>;
 
 try {
+  const geminiApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+  const googleAIPlugin = geminiApiKey ? googleAI({ apiKey: geminiApiKey }) : googleAI();
+
   if (process.env.NODE_ENV === 'production') {
     // In production, initialize Genkit normally
     console.log('Initializing Genkit AI for production with gemini-pro...');
     ai = genkit({
-      plugins: [googleAI()],
-      model: 'googleai/gemini-pro', // Changed model
+      plugins: [googleAIPlugin],
+      model: 'googleai/gemini-pro', 
     });
   } else {
     // In development, ensure the Genkit instance is created only once
     if (!global.__genkit_ai_instance) {
       console.log('Initializing Genkit AI for development with gemini-pro...');
       global.__genkit_ai_instance = genkit({
-        plugins: [googleAI()],
-        model: 'googleai/gemini-pro', // Changed model
+        plugins: [googleAIPlugin],
+        model: 'googleai/gemini-pro',
       });
     }
     ai = global.__genkit_ai_instance;
