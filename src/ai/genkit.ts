@@ -34,13 +34,11 @@ try {
   console.error(
     "CRITICAL ERROR DURING GENKIT INITIALIZATION in src/ai/genkit.ts:",
     `This often indicates an issue with your GEMINI_API_KEY (e.g., invalid, incorrect permissions, billing not enabled) or the AI service configuration. Please verify your API key and Google Cloud project settings. Original error: ${errorMessage}`,
-    e
+    e // Log the original error object for more details
   );
-  // Re-throwing the error is important so the application doesn't continue in a broken state.
-  // Next.js should ideally pick up this more specific error.
-  throw new Error(
-    `Genkit/GoogleAI plugin initialization failed. Please check server logs for details. Likely API key or configuration issue. Original error: ${errorMessage}`
-  );
+  // Re-throwing the original error might give Next.js more context.
+  throw e;
 }
 
 export { ai }; // Export the singleton instance
+

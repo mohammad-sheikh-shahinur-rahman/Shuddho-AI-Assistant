@@ -54,6 +54,10 @@ export async function handleCorrectText(
       } else {
         return { error: "সমর্থিত নয় এমন ফাইল ফরমেট। অনুগ্রহ করে .docx, .pdf, অথবা .txt ফাইল আপলোড করুন।" };
       }
+
+      if (!textToCorrect || textToCorrect.trim() === "") {
+        return { error: `ফাইল (${fileInput.name}) থেকে কোনো টেক্সট পাওয়া যায়নি অথবা ফাইলটি খালি।` };
+      }
     } catch (e) {
       console.error("File Parsing Error (Correction):", e);
       const errorMessage = e instanceof Error ? e.message : "অজানা ত্রুটি";
@@ -62,9 +66,6 @@ export async function handleCorrectText(
   }
 
   if (!textToCorrect || textToCorrect.trim() === "") {
-    if (fileInput && fileInput.size > 0) {
-        return { error: `ফাইল (${fileInput.name}) থেকে কোনো টেক্সট পাওয়া যায়নি অথবা ফাইলটি খালি।` };
-    }
     return { error: "অনুগ্রহ করে টেক্সটবক্সে কিছু লিখুন অথবা একটি (.docx, .pdf, .txt) ফাইল আপলোড করুন।" };
   }
 
@@ -75,8 +76,8 @@ export async function handleCorrectText(
   try {
     const correctionResult = await correctBanglaText(correctionInput);
     if (!correctionResult || typeof correctionResult.correctedText !== 'string') {
-        console.error("Invalid correctionResult from AI flow:", JSON.stringify(correctionResult));
-        return { error: "টেক্সট শুদ্ধ করা সম্ভব হয়নি। AI থেকে একটি ত্রুটিপূর্ণ বা অসম্পূর্ণ উত্তর পাওয়া গেছে (correction)।" };
+        console.error("Invalid correctionResult from AI flow in handleCorrectText:", JSON.stringify(correctionResult));
+        return { error: "টেক্সট শুদ্ধ করা সম্ভব হয়নি। AI থেকে একটি ত্রুটিপূর্ণ বা অসম্পূর্ণ উত্তর পাওয়া গেছে (correction)। বিস্তারিত জানতে সার্ভার লগ দেখুন।" };
     }
 
     const scoringInput: ScoreQualityInput = {
@@ -85,8 +86,8 @@ export async function handleCorrectText(
 
     const scoringResult = await scoreQuality(scoringInput);
      if (!scoringResult || typeof scoringResult.qualityScore !== 'number' || typeof scoringResult.explanationOfScore !== 'string') {
-        console.error("Invalid scoringResult from AI flow:", JSON.stringify(scoringResult));
-        return { error: "টেক্সটের গুণমান স্কোর করা সম্ভব হয়নি। AI থেকে একটি ত্রুটিপূর্ণ বা অসম্পূর্ণ উত্তর পাওয়া গেছে (scoring)।" };
+        console.error("Invalid scoringResult from AI flow in handleCorrectText:", JSON.stringify(scoringResult));
+        return { error: "টেক্সটের গুণমান স্কোর করা সম্ভব হয়নি। AI থেকে একটি ত্রুটিপূর্ণ বা অসম্পূর্ণ উত্তর পাওয়া গেছে (scoring)। বিস্তারিত জানতে সার্ভার লগ দেখুন।" };
     }
 
     return {
@@ -100,9 +101,9 @@ export async function handleCorrectText(
       message: `"${source}" থেকে প্রাপ্ত লেখা সফলভাবে সংশোধন ও মূল্যায়ন করা হয়েছে।`
     };
   } catch (e) {
-    console.error("AI Processing Error (Correction):", e);
+    console.error("AI Processing Error (handleCorrectText):", e);
     const errorMessage = e instanceof Error ? e.message : "অজানা ত্রুটি";
-    return { error: `AI প্রসেসিং-এ একটি সমস্যা হয়েছে: ${errorMessage} অনুগ্রহ করে আবার চেষ্টা করুন।` };
+    return { error: `AI প্রসেসিং-এ একটি সমস্যা হয়েছে (${source}). অনুগ্রহ করে আবার চেষ্টা করুন বা বিস্তারিত জানতে সার্ভার লগ দেখুন। ত্রুটি: ${errorMessage}` };
   }
 }
 
@@ -148,6 +149,9 @@ export async function handleSummarizeText(
       } else {
         return { error: "সমর্থিত নয় এমন ফাইল ফরমেট। অনুগ্রহ করে .docx, .pdf, অথবা .txt ফাইল আপলোড করুন।" };
       }
+      if (!textToSummarize || textToSummarize.trim() === "") {
+        return { error: `ফাইল (${fileInput.name}) থেকে কোনো টেক্সট পাওয়া যায়নি অথবা ফাইলটি খালি।` };
+      }
     } catch (e) {
       console.error("File Parsing Error (Summarization):", e);
       const errorMessage = e instanceof Error ? e.message : "অজানা ত্রুটি";
@@ -156,9 +160,6 @@ export async function handleSummarizeText(
   }
 
   if (!textToSummarize || textToSummarize.trim() === "") {
-    if (fileInput && fileInput.size > 0) {
-        return { error: `ফাইল (${fileInput.name}) থেকে কোনো টেক্সট পাওয়া যায়নি অথবা ফাইলটি খালি।` };
-    }
     return { error: "অনুগ্রহ করে টেক্সটবক্সে কিছু লিখুন অথবা একটি (.docx, .pdf, .txt) ফাইল আপলোড করুন।" };
   }
 
@@ -169,8 +170,8 @@ export async function handleSummarizeText(
   try {
     const summarizationResult = await summarizeBanglaText(summarizationInput);
     if (!summarizationResult || !summarizationResult.summary || summarizationResult.summary.trim() === "") {
-        console.error("Invalid summarizationResult from AI flow:", JSON.stringify(summarizationResult));
-        return { error: "লেখাটির সারাংশ তৈরি করা সম্ভব হয়নি। AI থেকে একটি ত্রুটিপূর্ণ বা অসম্পূর্ণ উত্তর পাওয়া গেছে।" };
+        console.error("Invalid summarizationResult from AI flow in handleSummarizeText:", JSON.stringify(summarizationResult));
+        return { error: "লেখাটির সারাংশ তৈরি করা সম্ভব হয়নি। AI থেকে একটি ত্রুটিপূর্ণ বা অসম্পূর্ণ উত্তর পাওয়া গেছে। বিস্তারিত জানতে সার্ভার লগ দেখুন।" };
     }
 
     return {
@@ -181,9 +182,9 @@ export async function handleSummarizeText(
       message: `"${source}" থেকে প্রাপ্ত লেখা সফলভাবে সারাংশ করা হয়েছে।`,
     };
   } catch (e) {
-    console.error("AI Processing Error (Summarization):", e);
+    console.error("AI Processing Error (handleSummarizeText):", e);
     const errorMessage = e instanceof Error ? e.message : "অজানা ত্রুটি";
-    return { error: `AI প্রসেসিং-এ একটি সমস্যা হয়েছে: ${errorMessage} অনুগ্রহ করে আবার চেষ্টা করুন।` };
+    return { error: `AI প্রসেসিং-এ একটি সমস্যা হয়েছে (${source}). অনুগ্রহ করে আবার চেষ্টা করুন বা বিস্তারিত জানতে সার্ভার লগ দেখুন। ত্রুটি: ${errorMessage}` };
   }
 }
 
@@ -236,11 +237,11 @@ export async function sendMessageToLanguageExpert(
   try {
     const aiResponse = await languageExpertChat(chatInput);
     if (!aiResponse || !aiResponse.response || aiResponse.response.trim() === "") {
-      console.error("Invalid aiResponse from languageExpertChat flow:", JSON.stringify(aiResponse));
+      console.error("Invalid aiResponse from languageExpertChat flow in sendMessageToLanguageExpert:", JSON.stringify(aiResponse));
       return {
         ...currentState,
         messages: currentMessagesWithUser,
-        error: "AI থেকে উত্তর পাওয়া যায়নি বা উত্তরটি অসম্পূর্ণ। অনুগ্রহ করে আবার চেষ্টা করুন।",
+        error: "AI থেকে উত্তর পাওয়া যায়নি বা উত্তরটি অসম্পূর্ণ। অনুগ্রহ করে আবার চেষ্টা করুন বা বিস্তারিত জানতে সার্ভার লগ দেখুন।",
       };
     }
 
@@ -255,12 +256,12 @@ export async function sendMessageToLanguageExpert(
       error: undefined,
     };
   } catch (e) {
-    console.error("Language Expert Chat Error:", e);
+    console.error("AI Processing Error (sendMessageToLanguageExpert):", e);
     const errorMessage = e instanceof Error ? e.message : "অজানা ত্রুটি";
     return {
       ...currentState,
       messages: currentMessagesWithUser,
-      error: `AI চ্যাট প্রসেসিং-এ একটি সমস্যা হয়েছে: ${errorMessage}`,
+      error: `AI চ্যাট প্রসেসিং-এ একটি সমস্যা হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন বা বিস্তারিত জানতে সার্ভার লগ দেখুন। ত্রুটি: ${errorMessage}`,
     };
   }
 }
@@ -306,8 +307,8 @@ export async function handleTranslateText(
   try {
     const translationResult = await translateText(translationInput);
     if (!translationResult || !translationResult.translatedText || translationResult.translatedText.trim() === "") {
-        console.error("Invalid translationResult from AI flow:", JSON.stringify(translationResult));
-        return { error: "টেক্সট অনুবাদ করা সম্ভব হয়নি। AI থেকে একটি ত্রুটিপূর্ণ বা অসম্পূর্ণ উত্তর পাওয়া গেছে।" };
+        console.error("Invalid translationResult from AI flow in handleTranslateText:", JSON.stringify(translationResult));
+        return { error: "টেক্সট অনুবাদ করা সম্ভব হয়নি। AI থেকে একটি ত্রুটিপূর্ণ বা অসম্পূর্ণ উত্তর পাওয়া গেছে। বিস্তারিত জানতে সার্ভার লগ দেখুন।" };
     }
 
     const langToName = (lang: 'bn' | 'en') => lang === 'bn' ? 'বাংলা' : 'ইংরেজি';
@@ -322,9 +323,9 @@ export async function handleTranslateText(
       targetLang: targetLanguage,
     };
   } catch (e) {
-    console.error("AI Processing Error (Translation):", e);
+    console.error("AI Processing Error (handleTranslateText):", e);
     const errorMessage = e instanceof Error ? e.message : "অজানা ত্রুটি";
-    return { error: `AI অনুবাদ প্রসেসিং-এ একটি সমস্যা হয়েছে: ${errorMessage} অনুগ্রহ করে আবার চেষ্টা করুন।` };
+    return { error: `AI অনুবাদ প্রসেসিং-এ একটি সমস্যা হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন বা বিস্তারিত জানতে সার্ভার লগ দেখুন। ত্রুটি: ${errorMessage}` };
   }
 }
 
@@ -368,6 +369,9 @@ export async function handleAnalyzeText(
       } else {
         return { error: "সমর্থিত নয় এমন ফাইল ফরমেট। অনুগ্রহ করে .docx, .pdf, অথবা .txt ফাইল আপলোড করুন।" };
       }
+      if (!textToAnalyze || textToAnalyze.trim() === "") {
+        return { error: `ফাইল (${fileInput.name}) থেকে কোনো টেক্সট পাওয়া যায়নি অথবা ফাইলটি খালি।` };
+      }
     } catch (e) {
       console.error("File Parsing Error (Analysis):", e);
       const errorMessage = e instanceof Error ? e.message : "অজানা ত্রুটি";
@@ -376,9 +380,6 @@ export async function handleAnalyzeText(
   }
 
   if (!textToAnalyze || textToAnalyze.trim() === "") {
-     if (fileInput && fileInput.size > 0) {
-        return { error: `ফাইল (${fileInput.name}) থেকে কোনো টেক্সট পাওয়া যায়নি অথবা ফাইলটি খালি।` };
-    }
     return { error: "অনুগ্রহ করে টেক্সটবক্সে কিছু লিখুন অথবা একটি (.docx, .pdf, .txt) ফাইল আপলোড করুন।" };
   }
 
@@ -395,8 +396,8 @@ export async function handleAnalyzeText(
         !['positive', 'negative', 'neutral', 'mixed'].includes(analysisResult.sentiment) ||
         typeof analysisResult.sentimentExplanation !== 'string' || analysisResult.sentimentExplanation.trim() === ""
     ) {
-        console.error("Invalid analysisResult from AI flow:", JSON.stringify(analysisResult));
-        return { error: "টেক্সট বিশ্লেষণ করা সম্ভব হয়নি। AI থেকে একটি ত্রুটিপূর্ণ বা অসম্পূর্ণ উত্তর পাওয়া গেছে।" };
+        console.error("Invalid analysisResult from AI flow in handleAnalyzeText:", JSON.stringify(analysisResult));
+        return { error: "টেক্সট বিশ্লেষণ করা সম্ভব হয়নি। AI থেকে একটি ত্রুটিপূর্ণ বা অসম্পূর্ণ উত্তর পাওয়া গেছে। বিস্তারিত জানতে সার্ভার লগ দেখুন।" };
     }
 
     return {
@@ -405,9 +406,9 @@ export async function handleAnalyzeText(
       message: `"${source}" থেকে প্রাপ্ত লেখা সফলভাবে বিশ্লেষণ করা হয়েছে।`,
     };
   } catch (e) {
-    console.error("AI Processing Error (Analysis):", e);
+    console.error("AI Processing Error (handleAnalyzeText):", e);
     const errorMessage = e instanceof Error ? e.message : "অজানা ত্রুটি";
-    return { error: `AI প্রসেসিং-এ একটি সমস্যা হয়েছে: ${errorMessage} অনুগ্রহ করে আবার চেষ্টা করুন।` };
+    return { error: `AI প্রসেসিং-এ একটি সমস্যা হয়েছে (${source}). অনুগ্রহ করে আবার চেষ্টা করুন বা বিস্তারিত জানতে সার্ভার লগ দেখুন। ত্রুটি: ${errorMessage}` };
   }
 }
 
