@@ -16,18 +16,18 @@ try {
 
   if (process.env.NODE_ENV === 'production') {
     // In production, initialize Genkit normally
-    console.log('Initializing Genkit AI for production with gemini-1.0-pro...');
+    console.log('Initializing Genkit AI for production with gemini-1.5-flash-latest...');
     ai = genkit({
       plugins: [googleAIPlugin],
-      model: 'googleai/gemini-1.0-pro', 
+      model: 'googleai/gemini-1.5-flash-latest', 
     });
   } else {
     // In development, ensure the Genkit instance is created only once
     if (!global.__genkit_ai_instance) {
-      console.log('Initializing Genkit AI for development with gemini-1.0-pro...');
+      console.log('Initializing Genkit AI for development with gemini-1.5-flash-latest...');
       global.__genkit_ai_instance = genkit({
         plugins: [googleAIPlugin],
-        model: 'googleai/gemini-1.0-pro',
+        model: 'googleai/gemini-1.5-flash-latest',
       });
     }
     ai = global.__genkit_ai_instance;
@@ -45,4 +45,3 @@ try {
 }
 
 export { ai }; // Export the singleton instance
-
