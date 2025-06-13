@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useRef, useActionState } from "react";
+import { useState, useEffect, useRef, useActionState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, Controller } from "react-hook-form";
@@ -98,6 +98,10 @@ export function BanglaCorrectorForm() {
     handleAdjustTone,
     { message: "", error: undefined, result: undefined }
   );
+
+  const [isSubmittingCorrection, startCorrectionTransition] = useTransition();
+  const [isAdjustingTone, startToneAdjustmentTransition] = useTransition();
+
 
   const correctionForm = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -222,13 +226,12 @@ export function BanglaCorrectorForm() {
     if (fileInputRef.current?.files && fileInputRef.current.files[0]) {
       formData.append("file", fileInputRef.current.files[0]);
     } else if (!data.text) {
-      // This case should ideally be caught by Zod, but as a fallback:
       toast({
         variant: "destructive",
         title: "ইনপুট প্রয়োজন",
         description: "অনুগ্রহ করে টেক্সট লিখুন অথবা একটি ফাইল আপলোড করুন।",
       });
-      return; // Prevent form action if no text and no file
+      return; 
     }
     
     setCorrectedText(undefined);
@@ -237,15 +240,17 @@ export function BanglaCorrectorForm() {
     setToneAdjustedText(undefined);
     setProcessedSourceText(undefined);
 
-    correctionFormAction(formData);
+    startCorrectionTransition(() => {
+      correctionFormAction(formData);
+    });
   };
 
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
       setSelectedFileName(event.target.files[0].name);
-      correctionForm.setValue("text", ""); // Clear text input if file is selected
-      correctionForm.clearErrors("text"); // Clear text validation error
+      correctionForm.setValue("text", ""); 
+      correctionForm.clearErrors("text"); 
     } else {
       setSelectedFileName(null);
     }
@@ -254,10 +259,10 @@ export function BanglaCorrectorForm() {
   const handleClearInputs = () => {
     correctionForm.reset({ text: "", tone: correctionForm.getValues("tone"), file: undefined });
     if (fileInputRef.current) {
-      fileInputRef.current.value = ""; // Also reset the actual file input element
+      fileInputRef.current.value = ""; 
     }
     setSelectedFileName(null);
-    correctionForm.clearErrors(); // Clear any existing validation errors
+    correctionForm.clearErrors(); 
     toast({ 
         title: "ইনপুট মুছে ফেলা হয়েছে", 
         description: "টেক্সটবক্স এবং ফাইল ইনপুট পরিষ্কার করা হয়েছে।" 
@@ -284,9 +289,9 @@ export function BanglaCorrectorForm() {
                 placeholder="এখানে আপনার বাংলা লেখা লিখুন..."
                 className="min-h-[150px] font-body text-base border-input focus:ring-primary"
                 rows={6}
-                disabled={!!selectedFileName} // Disable textarea if a file is selected
+                disabled={!!selectedFileName} 
               />
-              {correctionForm.formState.errors.text && !selectedFileName && ( // Only show text error if no file is selected
+              {correctionForm.formState.errors.text && !selectedFileName && ( 
                 <p className="text-sm text-destructive font-body flex items-center">
                   <AlertCircle className="mr-1 h-4 w-4" /> {correctionForm.formState.errors.text.message}
                 </p>
@@ -309,12 +314,12 @@ export function BanglaCorrectorForm() {
                             type="file"
                             accept=".docx,.pdf,.txt"
                             className="font-body border-input focus:ring-primary file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
-                            ref={fileInputRef} // Keep your original ref for direct manipulation
+                            ref={fileInputRef} 
                             name={name}
                             onBlur={onBlur}
                             onChange={(e) => {
-                                onChange(e.target.files); // RHF expects FileList
-                                handleFileChange(e); // Your original handler
+                                onChange(e.target.files); 
+                                handleFileChange(e); 
                             }}
                         />
                     )}
@@ -438,7 +443,7 @@ export function BanglaCorrectorForm() {
               <div className="space-y-2">
                 <Label className="font-body text-lg flex items-center"><Info className="mr-2 h-5 w-5 text-accent-foreground" /> ব্যাখ্যা</Label>
                 <div className="p-4 rounded-md bg-muted/30 border border-input font-body text-sm">
-                  {explanation.split('\\n').map((line, index) => ( // Use double backslash for \n in string literal
+                  {explanation.split('\\n').map((line, index) => ( 
                     <p key={index} className={cn(line.match(/^\\d+\\./) ? "mt-1" : "")}>{line.replace(/^"|"$/g, '')}</p>
                   ))}
                 </div>
@@ -473,7 +478,9 @@ export function BanglaCorrectorForm() {
                 const formData = new FormData();
                 formData.append("textToAdjust", correctedText); 
                 formData.append("newTone", data.newTone);
-                adjustToneFormAction(formData);
+                startToneAdjustmentTransition(() => {
+                  adjustToneFormAction(formData);
+                });
             })}
             className="space-y-6"
           >
