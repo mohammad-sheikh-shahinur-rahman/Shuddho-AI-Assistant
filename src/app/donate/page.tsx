@@ -8,7 +8,7 @@ import { DonatePageClient } from './donate-client';
 
 
 export default function DonatePage() {
-  const paymentNumber = "01959678229";
+  const paymentNumber = "01959678229"; // Replace with actual or placeholder number
 
   return (
     <>
