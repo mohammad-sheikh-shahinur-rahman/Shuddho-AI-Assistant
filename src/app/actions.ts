@@ -5,7 +5,7 @@ import { z } from "zod";
 import { correctBanglaText, type CorrectBanglaTextInput, type CorrectBanglaTextOutput } from "@/ai/flows/correct-bangla-text";
 import { adjustTone as adjustToneFlow, type AdjustToneInput, type AdjustToneOutput } from "@/ai/flows/adjust-tone";
 import mammoth from "mammoth";
-// Removed static import of pdf-parse: import pdfParser from "pdf-parse";
+// Static import of pdf-parse is removed. It will be dynamically imported below.
 
 // Schema for the form data validation coming from client (for handleCorrectText)
 // This schema is not directly used by Zod in handleCorrectText as FormData is handled manually.
