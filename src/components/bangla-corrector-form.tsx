@@ -145,7 +145,7 @@ export function BanglaCorrectorForm() {
         fileInputRef.current.value = "";
       }
       setSelectedFileName(null);
-      correctionForm.reset({ text: "", tone: correctionForm.getValues("tone") }); // Reset text and file input fields
+      correctionForm.reset({ text: "", tone: correctionForm.getValues("tone") }); 
     }
     if (correctionFormState.error) {
        toast({
