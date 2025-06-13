@@ -1,5 +1,6 @@
 import { BanglaCorrectorForm } from "@/components/bangla-corrector-form";
 import { BookOpen } from "lucide-react";
+import Link from 'next/link';
 
 export default function Home() {
   return (
@@ -18,6 +19,8 @@ export default function Home() {
       <BanglaCorrectorForm />
       <footer className="text-center mt-12 py-6 border-t border-border">
         <p className="text-sm text-muted-foreground font-body">
+          <Link href="/about" className="hover:text-primary hover:underline">আমাদের সম্পর্কে</Link>
+          <span className="mx-2">|</span>
           &copy; {new Date().getFullYear()} শুদ্ধ AI প্রুফরিডার. সর্বস্বত্ব সংরক্ষিত।
         </p>
       </footer>
