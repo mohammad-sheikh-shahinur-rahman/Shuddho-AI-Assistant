@@ -2,7 +2,8 @@
 import { BanglaCorrectorForm } from "@/components/bangla-corrector-form";
 import { BanglaSummarizerForm } from "@/components/bangla-summarizer-form";
 import { BanglaTranslatorForm } from "@/components/bangla-translator-form";
-import { BookOpen, Coins, ScrollText, Bot, Languages } from "lucide-react";
+import { BanglaAnalyzerForm } from "@/components/bangla-analyzer-form";
+import { BookOpen, Coins, ScrollText, Bot, Languages, ScanText } from "lucide-react";
 import Link from 'next/link';
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
@@ -57,6 +58,21 @@ export default function Home() {
 
       <Separator className="my-12 sm:my-16 md:my-20" />
 
+      <header id="analyzer-section" className="text-center mb-10 sm:mb-12">
+        <div className="inline-flex items-center justify-center p-3 bg-primary/10 rounded-full mb-4">
+           <ScanText className="h-10 w-10 text-primary" strokeWidth={1.5} />
+        </div>
+        <h1 className="font-headline text-4xl sm:text-5xl font-bold text-foreground">
+          লেখা বিশ্লেষণ
+        </h1>
+        <p className="font-body text-lg text-muted-foreground mt-3 max-w-xl mx-auto">
+          আপনার বাংলা লেখার শব্দ, অক্ষর, বাক্য সংখ্যা এবং সামগ্রিক অনুভূতি জানুন।
+        </p>
+      </header>
+      <BanglaAnalyzerForm />
+
+      <Separator className="my-12 sm:my-16 md:my-20" />
+
       <Card className="shadow-lg border-primary/20 hover:shadow-xl transition-shadow duration-300">
         <CardHeader className="items-center text-center pb-4">
             <div className="inline-flex items-center justify-center p-3 bg-primary/10 rounded-full mb-3">
@@ -94,6 +110,10 @@ export default function Home() {
           <span className="mx-2">|</span>
           <Link href="#translator-section" className="hover:text-primary hover:underline flex items-center justify-center sm:inline-flex">
             <Languages className="mr-1 h-4 w-4" strokeWidth={1.5} /> অনুবাদ পরিষেবা
+          </Link>
+          <span className="mx-2">|</span>
+          <Link href="#analyzer-section" className="hover:text-primary hover:underline flex items-center justify-center sm:inline-flex">
+            <ScanText className="mr-1 h-4 w-4" strokeWidth={1.5} /> লেখা বিশ্লেষণ
           </Link>
           <span className="mx-2">|</span>
           &copy; {new Date().getFullYear()} শুদ্ধ AI প্রুফরিডার। সর্বস্বত্ব সংরক্ষিত।

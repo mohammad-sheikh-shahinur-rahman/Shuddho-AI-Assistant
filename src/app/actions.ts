@@ -7,13 +7,14 @@ import { scoreQuality, type ScoreQualityInput } from "@/ai/flows/score-quality";
 import { summarizeBanglaText, type SummarizeBanglaTextInput } from "@/ai/flows/summarize-bangla-text";
 import { languageExpertChat, type LanguageExpertChatInput, type LanguageExpertChatOutput } from "@/ai/flows/language-expert-chat";
 import { translateText, type TranslateTextInput } from "@/ai/flows/translate-text-flow";
+import { analyzeText, type AnalyzeTextInput, type AnalyzeTextOutput } from "@/ai/flows/analyze-text-flow";
 import mammoth from "mammoth";
 
 
 export type CorrectTextFormState = {
   result?: {
     correctedText: string;
-    explanationOfCorrections?: string; // Made optional to align with schema
+    explanationOfCorrections?: string; 
     qualityScore?: number;
     explanationOfScore?: string;
   };
@@ -262,7 +263,7 @@ export type TranslateTextFormState = {
   };
   error?: string;
   message?: string;
-  originalTextSnippet?: string; // To show what was translated
+  originalTextSnippet?: string; 
   sourceLang?: 'bn' | 'en';
   targetLang?: 'bn' | 'en';
 };
@@ -315,5 +316,77 @@ export async function handleTranslateText(
     console.error("AI Processing Error (Translation):", e);
     const errorMessage = e instanceof Error ? e.message : "অজানা ত্রুটি";
     return { error: `AI অনুবাদ প্রসেসিং-এ একটি সমস্যা হয়েছে: ${errorMessage} অনুগ্রহ করে আবার চেষ্টা করুন।` };
+  }
+}
+
+
+export type AnalyzeTextFormState = {
+  result?: AnalyzeTextOutput;
+  error?: string;
+  message?: string;
+  originalTextSource?: string; // To show what was analyzed (e.g., "File: mydoc.txt" or "Textbox input")
+};
+
+export async function handleAnalyzeText(
+  prevState: AnalyzeTextFormState,
+  formData: FormData
+): Promise<AnalyzeTextFormState> {
+  const textInput = formData.get("text") as string | null;
+  const fileInput = formData.get("file") as File | null;
+
+  let textToAnalyze: string | undefined = textInput?.trim() || undefined;
+  let source = "টেক্সটবক্স";
+
+  if (fileInput && fileInput.size > 0) {
+    source = fileInput.name;
+    try {
+      const arrayBuffer = await fileInput.arrayBuffer();
+      if (arrayBuffer.byteLength === 0) {
+        return { error: `ফাইল (${fileInput.name}) খালি অথবা পড়া যাচ্ছে না। অনুগ্রহ করে একটি সঠিক ফাইল আপলোড করুন।` };
+      }
+
+      if (fileInput.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" || fileInput.name.endsWith(".docx")) {
+        const nodeBuffer = Buffer.from(arrayBuffer);
+        const { value } = await mammoth.extractRawText({ buffer: nodeBuffer });
+        textToAnalyze = value;
+      } else if (fileInput.type === "application/pdf" || fileInput.name.endsWith(".pdf")) {
+        const pdf = (await import("pdf-parse")).default;
+        const data = await pdf(Buffer.from(arrayBuffer));
+        textToAnalyze = data.text;
+      } else if (fileInput.type === "text/plain" || fileInput.name.endsWith(".txt")) {
+        textToAnalyze = Buffer.from(arrayBuffer).toString("utf-8");
+      } else {
+        return { error: "সমর্থিত নয় এমন ফাইল ফরমেট। অনুগ্রহ করে .docx, .pdf, অথবা .txt ফাইল আপলোড করুন।" };
+      }
+    } catch (e) {
+      console.error("File Parsing Error (Analysis):", e);
+      const errorMessage = e instanceof Error ? e.message : "অজানা ত্রুটি";
+      return { error: `ফাইল (${fileInput.name}) প্রসেস করতে সমস্যা হয়েছে: ${errorMessage} অনুগ্রহ করে আবার চেষ্টা করুন।` };
+    }
+  }
+
+  if (!textToAnalyze || textToAnalyze.trim() === "") {
+    return { error: "অনুগ্রহ করে টেক্সটবক্সে কিছু লিখুন অথবা একটি (.docx, .pdf, .txt) ফাইল আপলোড করুন।" };
+  }
+
+  const analysisInput: AnalyzeTextInput = {
+    text: textToAnalyze,
+  };
+
+  try {
+    const analysisResult = await analyzeText(analysisInput);
+    if (!analysisResult) {
+        return { error: "টেক্সট বিশ্লেষণ করা সম্ভব হয়নি। AI থেকে সঠিক উত্তর পাওয়া যায়নি।" };
+    }
+
+    return {
+      result: analysisResult,
+      originalTextSource: `"${source}" থেকে প্রাপ্ত লেখার বিশ্লেষণ`,
+      message: `"${source}" থেকে প্রাপ্ত লেখা সফলভাবে বিশ্লেষণ করা হয়েছে।`,
+    };
+  } catch (e) {
+    console.error("AI Processing Error (Analysis):", e);
+    const errorMessage = e instanceof Error ? e.message : "অজানা ত্রুটি";
+    return { error: `AI প্রসেসিং-এ একটি সমস্যা হয়েছে: ${errorMessage} অনুগ্রহ করে আবার চেষ্টা করুন।` };
   }
 }
