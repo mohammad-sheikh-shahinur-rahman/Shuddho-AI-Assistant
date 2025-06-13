@@ -1,7 +1,8 @@
 
 import { BanglaCorrectorForm } from "@/components/bangla-corrector-form";
 import { BanglaSummarizerForm } from "@/components/bangla-summarizer-form";
-import { BookOpen, Coins, ScrollText, Bot } from "lucide-react";
+import { BanglaTranslatorForm } from "@/components/bangla-translator-form";
+import { BookOpen, Coins, ScrollText, Bot, Languages } from "lucide-react";
 import Link from 'next/link';
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
@@ -41,6 +42,21 @@ export default function Home() {
 
       <Separator className="my-12 sm:my-16 md:my-20" />
 
+      <header id="translator-section" className="text-center mb-10 sm:mb-12">
+        <div className="inline-flex items-center justify-center p-3 bg-primary/10 rounded-full mb-4">
+           <Languages className="h-10 w-10 text-primary" strokeWidth={1.5} />
+        </div>
+        <h1 className="font-headline text-4xl sm:text-5xl font-bold text-foreground">
+          অনুবাদ পরিষেবা
+        </h1>
+        <p className="font-body text-lg text-muted-foreground mt-3 max-w-xl mx-auto">
+          বাংলা থেকে ইংরেজি এবং ইংরেজি থেকে বাংলাতে টেক্সট অনুবাদ করুন।
+        </p>
+      </header>
+      <BanglaTranslatorForm />
+
+      <Separator className="my-12 sm:my-16 md:my-20" />
+
       <Card className="shadow-lg border-primary/20 hover:shadow-xl transition-shadow duration-300">
         <CardHeader className="items-center text-center pb-4">
             <div className="inline-flex items-center justify-center p-3 bg-primary/10 rounded-full mb-3">
@@ -76,10 +92,13 @@ export default function Home() {
             <Bot className="mr-1 h-4 w-4" strokeWidth={1.5} /> ভাষাবিদের সাথে কথা বলুন
           </Link>
           <span className="mx-2">|</span>
+          <Link href="#translator-section" className="hover:text-primary hover:underline flex items-center justify-center sm:inline-flex">
+            <Languages className="mr-1 h-4 w-4" strokeWidth={1.5} /> অনুবাদ পরিষেবা
+          </Link>
+          <span className="mx-2">|</span>
           &copy; {new Date().getFullYear()} শুদ্ধ AI প্রুফরিডার। সর্বস্বত্ব সংরক্ষিত।
         </p>
       </footer>
     </main>
   );
 }
-

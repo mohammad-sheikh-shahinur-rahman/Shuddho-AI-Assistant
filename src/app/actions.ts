@@ -6,13 +6,14 @@ import { correctBanglaText, type CorrectBanglaTextInput } from "@/ai/flows/corre
 import { scoreQuality, type ScoreQualityInput } from "@/ai/flows/score-quality";
 import { summarizeBanglaText, type SummarizeBanglaTextInput } from "@/ai/flows/summarize-bangla-text";
 import { languageExpertChat, type LanguageExpertChatInput, type LanguageExpertChatOutput } from "@/ai/flows/language-expert-chat";
+import { translateText, type TranslateTextInput } from "@/ai/flows/translate-text-flow";
 import mammoth from "mammoth";
 
 
 export type CorrectTextFormState = {
   result?: {
     correctedText: string;
-    explanationOfCorrections: string;
+    explanationOfCorrections?: string; // Made optional to align with schema
     qualityScore?: number;
     explanationOfScore?: string;
   };
@@ -45,7 +46,7 @@ export async function handleCorrectText(
         textToCorrect = value;
       } else if (fileInput.type === "application/pdf" || fileInput.name.endsWith(".pdf")) {
         const pdf = (await import("pdf-parse")).default;
-        const data = await pdf(Buffer.from(arrayBuffer)); // pdf-parse expects Buffer
+        const data = await pdf(Buffer.from(arrayBuffer)); 
         textToCorrect = data.text;
       } else if (fileInput.type === "text/plain" || fileInput.name.endsWith(".txt")) {
         textToCorrect = Buffer.from(arrayBuffer).toString("utf-8");
@@ -133,7 +134,7 @@ export async function handleSummarizeText(
         textToSummarize = value;
       } else if (fileInput.type === "application/pdf" || fileInput.name.endsWith(".pdf")) {
         const pdf = (await import("pdf-parse")).default;
-        const data = await pdf(Buffer.from(arrayBuffer)); // pdf-parse expects Buffer
+        const data = await pdf(Buffer.from(arrayBuffer)); 
         textToSummarize = data.text;
       } else if (fileInput.type === "text/plain" || fileInput.name.endsWith(".txt")) {
         textToSummarize = Buffer.from(arrayBuffer).toString("utf-8");
@@ -202,40 +203,26 @@ export async function sendMessageToLanguageExpert(
   };
 
   const currentMessagesWithUser = [...currentState.messages, userMessage];
-
-  // Prepare history for the AI flow
   const historyForAI: {user?: string; model?: string}[] = [];
-  // let lastRole: 'user' | 'model' | null = null; // Not used currently
-  // let currentUserMessageForHistory: string | undefined = undefined; // Renamed for clarity
 
-  // Reconstruct history as pairs of user/model messages for the prompt
    currentMessagesWithUser.filter(msg => msg.role === 'user' || msg.role === 'model').forEach((msg, index, arr) => {
     if (msg.role === 'user') {
-      // Look ahead for the next model message if this is not the last message
       if (index + 1 < arr.length && arr[index+1].role === 'model') {
-         //This is a user message that has a corresponding model response later in the array
+         // This is a user message that has a corresponding model response later in the array
       } else if (index === arr.length -1 ) {
          // This is the current user message, which doesn't have a model response yet.
-         // It will be passed as the main 'message' to the AI, not as history.
       }
     } else if (msg.role === 'model') {
-        // Find the preceding user message for this model message
         if (index > 0 && arr[index-1].role === 'user') {
             historyForAI.push({ user: arr[index-1].content, model: msg.content });
-        } else if (index === 0) { // Model message is the first in the list (e.g. initial greeting)
-            // This scenario implies the model initiated or there's no preceding user message in the current filtered list.
-            // Depending on how history is structured, we might push only the model part.
-            // For now, Genkit's history format typically pairs them.
-            // If it's an initial greeting from a system message, it's usually not part of 'history' in this way.
-            // Given our current use, a model message without a preceding user message in `historyForAI` would be unusual.
         }
     }
   });
 
 
   const chatInput: LanguageExpertChatInput = {
-    message: userInput, // The current user's message
-    history: historyForAI, // The reconstructed history of past user/model pairs
+    message: userInput, 
+    history: historyForAI, 
   };
 
   try {
@@ -243,7 +230,7 @@ export async function sendMessageToLanguageExpert(
     if (!aiResponse || !aiResponse.response) {
       return {
         ...currentState,
-        messages: currentMessagesWithUser, // Keep user message
+        messages: currentMessagesWithUser, 
         error: "AI থেকে উত্তর পাওয়া যায়নি। অনুগ্রহ করে আবার চেষ্টা করুন।",
       };
     }
@@ -263,8 +250,70 @@ export async function sendMessageToLanguageExpert(
     const errorMessage = e instanceof Error ? e.message : "অজানা ত্রুটি";
     return {
       ...currentState,
-      messages: currentMessagesWithUser, // Keep user message
+      messages: currentMessagesWithUser, 
       error: `AI চ্যাট প্রসেসিং-এ একটি সমস্যা হয়েছে: ${errorMessage}`,
     };
+  }
+}
+
+export type TranslateTextFormState = {
+  result?: {
+    translatedText: string;
+  };
+  error?: string;
+  message?: string;
+  originalTextSnippet?: string; // To show what was translated
+  sourceLang?: 'bn' | 'en';
+  targetLang?: 'bn' | 'en';
+};
+
+export async function handleTranslateText(
+  prevState: TranslateTextFormState,
+  formData: FormData
+): Promise<TranslateTextFormState> {
+  const textInput = formData.get("text") as string | null;
+  const sourceLanguage = formData.get("sourceLanguage") as 'bn' | 'en' | null;
+  const targetLanguage = formData.get("targetLanguage") as 'bn' | 'en' | null;
+
+  if (!textInput || textInput.trim() === "") {
+    return { error: "অনুবাদ করার জন্য অনুগ্রহ করে কিছু টেক্সট লিখুন।" };
+  }
+  if (!sourceLanguage) {
+    return { error: "অনুগ্রহ করে মূল ভাষা নির্বাচন করুন।" };
+  }
+  if (!targetLanguage) {
+    return { error: "অনুগ্রহ করে লক্ষ্য ভাষা নির্বাচন করুন।" };
+  }
+  if (sourceLanguage === targetLanguage) {
+    return { error: "মূল এবং লক্ষ্য ভাষা একই হতে পারবে না।" };
+  }
+
+  const translationInput: TranslateTextInput = {
+    text: textInput,
+    sourceLanguage: sourceLanguage,
+    targetLanguage: targetLanguage,
+  };
+
+  try {
+    const translationResult = await translateText(translationInput);
+    if (!translationResult || !translationResult.translatedText) {
+        return { error: "টেক্সট অনুবাদ করা সম্ভব হয়নি। AI থেকে সঠিক উত্তর পাওয়া যায়নি বা উত্তরে সমস্যা রয়েছে।" };
+    }
+
+    const langToName = (lang: 'bn' | 'en') => lang === 'bn' ? 'বাংলা' : 'ইংরেজি';
+
+    return {
+      result: {
+        translatedText: translationResult.translatedText,
+      },
+      originalTextSnippet: `"${textInput.substring(0, 70)}${textInput.length > 70 ? '...' : ''}" (${langToName(sourceLanguage)} থেকে ${langToName(targetLanguage)})`,
+      message: `টেক্সট সফলভাবে অনুবাদ করা হয়েছে।`,
+      sourceLang: sourceLanguage,
+      targetLang: targetLanguage,
+    };
+  } catch (e) {
+    console.error("AI Processing Error (Translation):", e);
+    const errorMessage = e instanceof Error ? e.message : "অজানা ত্রুটি";
+    return { error: `AI অনুবাদ প্রসেসিং-এ একটি সমস্যা হয়েছে: ${errorMessage} অনুগ্রহ করে আবার চেষ্টা করুন।` };
   }
 }
