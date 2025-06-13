@@ -24,7 +24,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { Copy, AlertCircle, CheckCircle, Info, Sparkles, FileText, DownloadCloud, Trash2, MessageSquareQuote } from "lucide-react";
+import { Copy, AlertCircle, CheckCircle, Info, Sparkles, FileText, DownloadCloud, Trash2, MessageSquareQuote, FileSignature, Gauge } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const formSchema = z.object({
@@ -41,7 +41,7 @@ function SubmitButton({ className }: { className?: string }) {
   return (
     <Button type="submit" disabled={pending} className={cn("w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground", className)}>
       {pending ? "লোড হচ্ছে..." : "শুদ্ধ করুন"}
-      {!pending && <Sparkles className="ml-2 h-4 w-4" />}
+      {!pending && <Sparkles className="ml-2 h-4 w-4" strokeWidth={1.5} />}
     </Button>
   );
 }
@@ -76,11 +76,11 @@ export function BanglaCorrectorForm() {
 
 
   useEffect(() => {
-    if (correctionFormState.message && correctionFormState.result) { // only show success if result is also there
+    if (correctionFormState.message && correctionFormState.result) { 
       toast({
         title: "সফল",
         description: correctionFormState.message,
-        action: <CheckCircle className="text-green-500" />,
+        action: <CheckCircle className="text-green-500" strokeWidth={1.5}/>,
       });
     }
     if (correctionFormState.result) {
@@ -97,12 +97,12 @@ export function BanglaCorrectorForm() {
       }
       setSelectedFileName(null);
       correctionForm.reset({ text: "" }); 
-    } else { // if no result, clear previous results
+    } else { 
         setCorrectedText(undefined);
         setExplanationOfCorrections(undefined);
         setQualityScore(undefined);
         setExplanationOfScore(undefined);
-        if (!correctionFormState.error) { // if no error, but no result, it might be initial state or cleared state
+        if (!correctionFormState.error) { 
             setProcessedSourceText(undefined);
         }
     }
@@ -113,12 +113,11 @@ export function BanglaCorrectorForm() {
         title: "ত্রুটি",
         description: correctionFormState.error,
       });
-      // Clear results on error
       setCorrectedText(undefined);
       setExplanationOfCorrections(undefined);
       setQualityScore(undefined);
       setExplanationOfScore(undefined);
-      setProcessedSourceText(undefined); // Also clear source text indication on error
+      setProcessedSourceText(undefined); 
     }
   }, [correctionFormState, toast, correctionForm]);
 
@@ -129,7 +128,7 @@ export function BanglaCorrectorForm() {
       toast({
         title: "কপি হয়েছে",
         description: `${type} ক্লিপবোর্ডে কপি করা হয়েছে।`,
-        action: <CheckCircle className="text-green-500" />,
+        action: <CheckCircle className="text-green-500" strokeWidth={1.5} />,
       });
     }
   };
@@ -155,7 +154,7 @@ export function BanglaCorrectorForm() {
     toast({
       title: "ডাউনলোড শুরু হয়েছে",
       description: `${link.download} ফাইলটি ডাউনলোড হচ্ছে।`,
-      action: <CheckCircle className="text-green-500" />,
+      action: <CheckCircle className="text-green-500" strokeWidth={1.5}/>,
     });
   };
   
@@ -168,7 +167,6 @@ export function BanglaCorrectorForm() {
     if (fileInputRef.current?.files && fileInputRef.current.files[0]) {
       formData.append("file", fileInputRef.current.files[0]);
     } else if (!data.text) {
-      // This case should ideally be caught by zod resolver, but as a fallback:
       correctionForm.setError("root", { message: "অনুগ্রহ করে টেক্সট লিখুন অথবা একটি ফাইল আপলোড করুন।"});
       toast({
         variant: "destructive",
@@ -178,7 +176,6 @@ export function BanglaCorrectorForm() {
       return; 
     }
     
-    // Clear previous results before new submission
     setCorrectedText(undefined);
     setExplanationOfCorrections(undefined);
     setQualityScore(undefined);
@@ -209,15 +206,11 @@ export function BanglaCorrectorForm() {
     }
     setSelectedFileName(null);
     correctionForm.clearErrors(); 
-    // Also clear results from the state
     setCorrectedText(undefined);
     setExplanationOfCorrections(undefined);
     setQualityScore(undefined);
     setExplanationOfScore(undefined);
     setProcessedSourceText(undefined);
-
-    // Reset form action state manually if needed, or rely on new submission to clear it
-    // correctionFormAction(new FormData()); // This might trigger an action, be careful
     
     toast({ 
         title: "ইনপুট মুছে ফেলা হয়েছে", 
@@ -230,7 +223,10 @@ export function BanglaCorrectorForm() {
     <div className="space-y-8">
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle className="font-headline text-2xl">আপনার লেখা ইনপুট করুন</CardTitle>
+          <CardTitle className="font-headline text-2xl flex items-center">
+            <FileSignature className="mr-3 h-7 w-7 text-primary" strokeWidth={1.5} />
+            আপনার লেখা ইনপুট করুন
+          </CardTitle>
           <CardDescription className="font-body">
             আপনার বাংলা লেখা, বইয়ের পাণ্ডুলিপি এখানে টাইপ করুন অথবা একটি DOCX, PDF, বা TXT ফাইল আপলোড করুন। দীর্ঘ লেখার জন্য TXT ফাইল ব্যবহার করা সুবিধাজনক।
           </CardDescription>
@@ -249,7 +245,7 @@ export function BanglaCorrectorForm() {
               />
               {correctionForm.formState.errors.text && !selectedFileName && ( 
                 <p className="text-sm text-destructive font-body flex items-center">
-                  <AlertCircle className="mr-1 h-4 w-4" /> {correctionForm.formState.errors.text.message}
+                  <AlertCircle className="mr-1 h-4 w-4" strokeWidth={1.5} /> {correctionForm.formState.errors.text.message}
                 </p>
               )}
             </div>
@@ -264,7 +260,7 @@ export function BanglaCorrectorForm() {
                 <Controller
                     name="file"
                     control={correctionForm.control}
-                    render={({ field: { onChange, onBlur, name, ref } }) => ( // Removed value from field
+                    render={({ field: { onChange, onBlur, name, ref } }) => ( 
                         <Input
                             id="file-upload"
                             type="file"
@@ -283,17 +279,17 @@ export function BanglaCorrectorForm() {
               </div>
               {selectedFileName && (
                 <p className="text-sm text-muted-foreground font-body flex items-center mt-1">
-                  <FileText className="mr-2 h-4 w-4 text-primary" /> নির্বাচিত ফাইল: {selectedFileName}
+                  <FileText className="mr-2 h-4 w-4 text-primary" strokeWidth={1.5} /> নির্বাচিত ফাইল: {selectedFileName}
                 </p>
               )}
                {correctionForm.formState.errors.file && (
                 <p className="text-sm text-destructive font-body flex items-center">
-                  <AlertCircle className="mr-1 h-4 w-4" /> {correctionForm.formState.errors.file.message}
+                  <AlertCircle className="mr-1 h-4 w-4" strokeWidth={1.5} /> {correctionForm.formState.errors.file.message}
                 </p>
               )}
                {correctionForm.formState.errors.root && ( 
                 <p className="text-sm text-destructive font-body flex items-center mt-2">
-                  <AlertCircle className="mr-1 h-4 w-4" /> {correctionForm.formState.errors.root.message}
+                  <AlertCircle className="mr-1 h-4 w-4" strokeWidth={1.5} /> {correctionForm.formState.errors.root.message}
                 </p>
               )}
             </div>
@@ -305,7 +301,7 @@ export function BanglaCorrectorForm() {
                 onClick={handleClearInputs}
                 className="w-full sm:w-auto"
             >
-                <Trash2 className="mr-2 h-4 w-4" />
+                <Trash2 className="mr-2 h-4 w-4" strokeWidth={1.5} />
                 ইনপুট ও ফলাফল মুছুন
             </Button>
             <SubmitButton className="w-full sm:w-auto" />
@@ -316,7 +312,10 @@ export function BanglaCorrectorForm() {
       { (correctedText || explanationOfCorrections || qualityScore !== undefined || explanationOfScore || correctionFormState.error || processedSourceText) && (
         <Card className="shadow-lg">
           <CardHeader>
-            <CardTitle className="font-headline text-2xl">ফলাফল</CardTitle>
+            <CardTitle className="font-headline text-2xl flex items-center">
+              <Sparkles className="mr-3 h-7 w-7 text-primary" strokeWidth={1.5} />
+              ফলাফল
+            </CardTitle>
             {processedSourceText && (
               <CardDescription className="font-body text-sm text-muted-foreground">
                 {processedSourceText}
@@ -324,9 +323,9 @@ export function BanglaCorrectorForm() {
             )}
           </CardHeader>
           <CardContent className="space-y-6">
-            {correctionFormState.error && ( // Show error if it exists, regardless of other results
+            {correctionFormState.error && ( 
               <div className="text-destructive font-body p-4 border border-destructive bg-destructive/10 rounded-md flex items-start">
-                <AlertCircle className="mr-3 h-5 w-5 flex-shrink-0" />
+                <AlertCircle className="mr-3 h-5 w-5 flex-shrink-0" strokeWidth={1.5} />
                 <div>
                   <h3 className="font-semibold">একটি সমস্যা হয়েছে</h3>
                   <p>{correctionFormState.error}</p>
@@ -344,7 +343,7 @@ export function BanglaCorrectorForm() {
                       onClick={() => handleCopyToClipboard(correctedText, "সংশোধিত লেখা")}
                       className="text-accent-foreground hover:bg-accent/80 w-full sm:w-auto"
                     >
-                      <Copy className="mr-2 h-4 w-4" />
+                      <Copy className="mr-2 h-4 w-4" strokeWidth={1.5} />
                       কপি করুন
                     </Button>
                     <Button
@@ -353,7 +352,7 @@ export function BanglaCorrectorForm() {
                         onClick={() => handleDownloadText(correctedText, "সংশোধিত_লেখা")}
                         className="w-full sm:w-auto"
                     >
-                        <DownloadCloud className="mr-2 h-4 w-4" />
+                        <DownloadCloud className="mr-2 h-4 w-4" strokeWidth={1.5} />
                         ডাউনলোড
                     </Button>
                   </div>
@@ -369,17 +368,23 @@ export function BanglaCorrectorForm() {
             )}
             {explanationOfCorrections && (
               <div className="space-y-2">
-                <Label className="font-body text-lg flex items-center"><Info className="mr-2 h-5 w-5 text-accent-foreground" /> সংশোধনের ব্যাখ্যা</Label>
+                <Label className="font-body text-lg flex items-center">
+                  <Info className="mr-2 h-5 w-5 text-accent-foreground" strokeWidth={1.5} /> 
+                  সংশোধনের ব্যাখ্যা
+                </Label>
                 <div className="p-4 rounded-md bg-muted/30 border border-input font-body text-sm whitespace-pre-line">
                   {explanationOfCorrections.split('\n').map((line, index) => ( 
-                    <p key={index} className={cn(line.match(/^\d+\./) ? "mt-1" : "")}>{line.replace(/^"|"$/g, '')}</p>
+                    <p key={index} className={cn(line.match(/^(\d+\.|-|\*)\s/) ? "mt-1" : "")}>{line.replace(/^"|"$/g, '')}</p>
                   ))}
                 </div>
               </div>
             )}
             {qualityScore !== undefined && (
               <div className="space-y-2">
-                <Label className="font-body text-lg">মান স্কোর: <span className="font-bold text-primary">{qualityScore}/100</span></Label>
+                <Label className="font-body text-lg flex items-center">
+                  <Gauge className="mr-2 h-5 w-5 text-primary" strokeWidth={1.5} />
+                  মান স্কোর: <span className="font-bold text-primary">{qualityScore}/100</span>
+                </Label>
                 <Progress value={qualityScore} className="w-full h-3 [&>div]:bg-primary" />
                  <p className="text-xs text-muted-foreground font-body">
                   এই স্কোরটি লেখার বর্তমান গুণমান নির্দেশ করে।
@@ -388,10 +393,13 @@ export function BanglaCorrectorForm() {
             )}
              {explanationOfScore && (
               <div className="space-y-2">
-                <Label className="font-body text-lg flex items-center"><MessageSquareQuote className="mr-2 h-5 w-5 text-accent-foreground" /> স্কোরের ব্যাখ্যা</Label>
+                <Label className="font-body text-lg flex items-center">
+                  <MessageSquareQuote className="mr-2 h-5 w-5 text-accent-foreground" strokeWidth={1.5} /> 
+                  স্কোরের ব্যাখ্যা
+                </Label>
                 <div className="p-4 rounded-md bg-muted/30 border border-input font-body text-sm whitespace-pre-line">
                   {explanationOfScore.split('\n').map((line, index) => ( 
-                    <p key={index} className={cn(line.match(/^\d+\./) ? "mt-1" : "")}>{line.replace(/^"|"$/g, '')}</p>
+                    <p key={index} className={cn(line.match(/^(\d+\.|-|\*)\s/) ? "mt-1" : "")}>{line.replace(/^"|"$/g, '')}</p>
                   ))}
                 </div>
               </div>

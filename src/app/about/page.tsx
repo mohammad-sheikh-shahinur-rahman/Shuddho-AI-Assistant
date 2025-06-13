@@ -1,5 +1,5 @@
 
-import { Users, Lightbulb, Target, UserCircle, Link as LinkIcon, Gift } from 'lucide-react';
+import { Users, Lightbulb, Target, UserCircle, Link as LinkIcon, Gift, Mail } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
@@ -110,7 +110,10 @@ export default function AboutPage() {
 
         <Card className="shadow-md hover:shadow-lg transition-shadow duration-300">
           <CardHeader>
-             <CardTitle className="font-headline text-2xl font-semibold mb-2">যোগাযোগ</CardTitle>
+             <CardTitle className="font-headline text-2xl font-semibold mb-2 flex items-center">
+                <Mail className="h-7 w-7 mr-3 text-primary" strokeWidth={1.5} />
+                যোগাযোগ
+             </CardTitle>
           </CardHeader>
           <CardContent className="font-body text-base sm:text-lg text-card-foreground">
             <p>
