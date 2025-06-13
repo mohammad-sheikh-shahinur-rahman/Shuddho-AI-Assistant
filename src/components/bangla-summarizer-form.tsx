@@ -1,8 +1,8 @@
 
 "use client";
 
-import { useState, useEffect, useRef, useActionState, useTransition } from "react";
-// useFormStatus is removed as SubmitButton will take isPending prop
+import { useState, useEffect, useRef, useActionState } from "react";
+// Removed useTransition as useActionState handles transitions for its action
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
@@ -36,7 +36,6 @@ const formSchema = z.object({
 
 
 function SubmitButton({ className, isPending }: { className?: string; isPending: boolean }) {
-  // const { pending } = useFormStatus(); // Replaced with isPending prop
   return (
     <Button type="submit" disabled={isPending} className={cn("w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground", className)}>
       {isPending ? "লোড হচ্ছে..." : "সারাংশ করুন"}
@@ -57,7 +56,7 @@ export function BanglaSummarizerForm() {
     handleSummarizeText,
     initialFormState
   );
-  const [, startSummarizationTransition] = useTransition(); // For wrapping the action call
+  // Removed separate useTransition as useActionState's action handles it.
 
   const summarizationForm = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -143,7 +142,7 @@ export function BanglaSummarizerForm() {
     });
   };
   
-  const handleFormSubmit = summarizationForm.handleSubmit(async (data: z.infer<typeof formSchema>) => {
+  const onRHFSubmit = (data: z.infer<typeof formSchema>) => {
     const formData = new FormData();
     if (data.text) {
       formData.append("text", data.text);
@@ -163,10 +162,9 @@ export function BanglaSummarizerForm() {
     
     setSummary(undefined);
     setProcessedSourceText(undefined);
-    startSummarizationTransition(() => {
-      summarizeFormAction(formData);
-    });
-  });
+    // Call the action from useActionState directly. It handles transitions.
+    summarizeFormAction(formData);
+  };
 
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -209,7 +207,7 @@ export function BanglaSummarizerForm() {
             এখানে আপনার দীর্ঘ বাংলা লেখা টাইপ করুন বা একটি DOCX, PDF, অথবা TXT ফাইল আপলোড করে তার সারাংশ পান।
           </CardDescription>
         </CardHeader>
-        <form onSubmit={handleFormSubmit} className="space-y-6">
+        <form onSubmit={summarizationForm.handleSubmit(onRHFSubmit)} className="space-y-6">
            <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="summarize-text" className="font-body">আপনার লেখা (যদি ফাইল আপলোড না করেন)</Label>
@@ -352,4 +350,3 @@ export function BanglaSummarizerForm() {
     </div>
   );
 }
-

@@ -1,8 +1,8 @@
 
 "use client";
 
-import { useState, useEffect, useRef, useActionState, useTransition } from "react";
-import { useFormStatus } from "react-dom";
+import { useState, useEffect, useRef, useActionState } from "react";
+// Removed useTransition and useFormStatus as useActionState handles pending state
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
@@ -36,12 +36,11 @@ const formSchema = z.object({
 });
 
 
-function SubmitButton({ className }: { className?: string }) {
-  const { pending } = useFormStatus();
+function SubmitButton({ className, isPending }: { className?: string; isPending: boolean }) {
   return (
-    <Button type="submit" disabled={pending} className={cn("w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground", className)}>
-      {pending ? "লোড হচ্ছে..." : "শুদ্ধ করুন"}
-      {!pending && <Sparkles className="ml-2 h-4 w-4" strokeWidth={1.5} />}
+    <Button type="submit" disabled={isPending} className={cn("w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground", className)}>
+      {isPending ? "লোড হচ্ছে..." : "শুদ্ধ করুন"}
+      {!isPending && <Sparkles className="ml-2 h-4 w-4" strokeWidth={1.5} />}
     </Button>
   );
 }
@@ -54,12 +53,11 @@ export function BanglaCorrectorForm() {
   const initialFormState: CorrectTextFormState = { 
     message: "", error: undefined, result: undefined, originalText: undefined 
   };
-  const [correctionFormState, correctionFormAction] = useActionState<CorrectTextFormState, FormData>(
+  // Correctly use useActionState to get isCorrectionPending
+  const [correctionFormState, correctionFormAction, isCorrectionPending] = useActionState<CorrectTextFormState, FormData>(
     handleCorrectText,
     initialFormState
   );
-
-  const [isSubmittingCorrection, startCorrectionTransition] = useTransition();
 
   const correctionForm = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -158,7 +156,8 @@ export function BanglaCorrectorForm() {
     });
   };
   
-  const handleFormSubmit = (data: z.infer<typeof formSchema>) => {
+  // RHF's handleSubmit calls this
+  const onRHFSubmit = (data: z.infer<typeof formSchema>) => {
     const formData = new FormData();
     if (data.text) {
       formData.append("text", data.text);
@@ -167,6 +166,7 @@ export function BanglaCorrectorForm() {
     if (fileInputRef.current?.files && fileInputRef.current.files[0]) {
       formData.append("file", fileInputRef.current.files[0]);
     } else if (!data.text) {
+      // This case should be caught by zod refine, but as a safeguard:
       correctionForm.setError("root", { message: "অনুগ্রহ করে টেক্সট লিখুন অথবা একটি ফাইল আপলোড করুন।"});
       toast({
         variant: "destructive",
@@ -182,9 +182,8 @@ export function BanglaCorrectorForm() {
     setExplanationOfScore(undefined);
     setProcessedSourceText(undefined);
 
-    startCorrectionTransition(() => {
-      correctionFormAction(formData);
-    });
+    // Call the action from useActionState directly
+    correctionFormAction(formData);
   };
 
 
@@ -212,6 +211,9 @@ export function BanglaCorrectorForm() {
     setExplanationOfScore(undefined);
     setProcessedSourceText(undefined);
     
+    // Optionally reset the action state if needed, though it usually resets on new action.
+    // For now, just clearing UI state.
+
     toast({ 
         title: "ইনপুট মুছে ফেলা হয়েছে", 
         description: "টেক্সটবক্স এবং ফাইল ইনপুট পরিষ্কার করা হয়েছে। ফলাফলও মুছে ফেলা হয়েছে।" 
@@ -231,7 +233,7 @@ export function BanglaCorrectorForm() {
             আপনার বাংলা লেখা, বইয়ের পাণ্ডুলিপি এখানে টাইপ করুন অথবা একটি DOCX, PDF, বা TXT ফাইল আপলোড করুন। দীর্ঘ লেখার জন্য TXT ফাইল ব্যবহার করা সুবিধাজনক।
           </CardDescription>
         </CardHeader>
-        <form onSubmit={correctionForm.handleSubmit(handleFormSubmit)} className="space-y-6">
+        <form onSubmit={correctionForm.handleSubmit(onRHFSubmit)} className="space-y-6">
            <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="text" className="font-body">আপনার লেখা (যদি ফাইল আপলোড না করেন)</Label>
@@ -241,7 +243,7 @@ export function BanglaCorrectorForm() {
                 placeholder="এখানে আপনার বাংলা লেখা লিখুন..."
                 className="min-h-[200px] font-body text-base border-input focus:ring-primary"
                 rows={15}
-                disabled={!!selectedFileName} 
+                disabled={!!selectedFileName || isCorrectionPending} 
               />
               {correctionForm.formState.errors.text && !selectedFileName && ( 
                 <p className="text-sm text-destructive font-body flex items-center">
@@ -273,6 +275,7 @@ export function BanglaCorrectorForm() {
                                 onChange(e.target.files); 
                                 handleFileChange(e); 
                             }}
+                            disabled={isCorrectionPending}
                         />
                     )}
                 />
@@ -300,11 +303,13 @@ export function BanglaCorrectorForm() {
                 variant="outline" 
                 onClick={handleClearInputs}
                 className="w-full sm:w-auto"
+                disabled={isCorrectionPending}
             >
                 <Trash2 className="mr-2 h-4 w-4" strokeWidth={1.5} />
                 ইনপুট ও ফলাফল মুছুন
             </Button>
-            <SubmitButton className="w-full sm:w-auto" />
+            {/* Pass isCorrectionPending to SubmitButton */}
+            <SubmitButton className="w-full sm:w-auto" isPending={isCorrectionPending} />
           </CardFooter>
         </form>
       </Card>
