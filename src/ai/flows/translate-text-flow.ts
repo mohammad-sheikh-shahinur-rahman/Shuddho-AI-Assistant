@@ -5,7 +5,7 @@
  *
  * - translateText - A function that handles the text translation process.
  * - TranslateTextInput - The input type for the translateText function.
- * - TranslateTextOutput - The return type for the translateText function.
+ * - TranslateTextOutput - The return type for the translateText functionूं
  */
 
 import {ai} from '@/ai/genkit';
@@ -38,7 +38,7 @@ export async function translateText(input: TranslateTextInput): Promise<Translat
 
 const prompt = ai.definePrompt({
   name: 'translateTextPrompt',
-  input: {schema: z.object({ 
+  input: {schema: z.object({
     text: z.string(),
     sourceLanguageName: z.string(),
     targetLanguageName: z.string(),
@@ -66,17 +66,29 @@ const translateTextFlow = ai.defineFlow(
   async (input) => {
     const sourceLanguageName = langCodeToName(input.sourceLanguage);
     const targetLanguageName = langCodeToName(input.targetLanguage);
+    const actionName = "translateTextFlow";
 
-    const {output} = await prompt({
-        text: input.text,
-        sourceLanguageName,
-        targetLanguageName,
-    });
+    try {
+      const {output} = await prompt({
+          text: input.text,
+          sourceLanguageName,
+          targetLanguageName,
+      });
 
-    // Robust check for the required translatedText property
-    if (!output || typeof output.translatedText !== 'string' || output.translatedText.trim() === "") {
-        return { translatedText: "অনুবাদ ব্যর্থ হয়েছে: AI মডেল থেকে কোনো অনুবাদিত টেক্সট পাওয়া যায়নি বা উত্তরটি অসম্পূর্ণ।" };
+      // Robust check for the required translatedText property
+      if (!output || typeof output.translatedText !== 'string' || output.translatedText.trim() === "") {
+          const specificError = "অনুবাদ প্রক্রিয়াকরণ পরবর্তী সমস্যা: AI মডেল থেকে অনুবাদিত টেক্সট পাওয়া যায়নি বা উত্তরটি অসম্পূর্ণ।";
+          console.warn(`${actionName}: ${specificError} Input: ${JSON.stringify(input)}. Output: ${JSON.stringify(output)}`);
+          throw new Error(specificError);
+      }
+      return output;
+    } catch (flowError) {
+        // Log the error within the flow for more specific context
+        console.error(`Error within ${actionName} for input ${JSON.stringify(input)}:`, flowError instanceof Error ? `${flowError.message} ${flowError.stack}` : flowError);
+        // Re-throw the error so the calling server action can handle it and present a user-friendly message.
+        // The server action's catch block will also log this.
+        throw flowError;
     }
-    return output;
   }
 );
+
