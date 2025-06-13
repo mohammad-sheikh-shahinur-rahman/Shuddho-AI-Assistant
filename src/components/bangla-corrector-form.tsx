@@ -49,11 +49,11 @@ export function BanglaCorrectorForm() {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
+  const [fileReadingProgress, setFileReadingProgress] = useState<number | null>(null);
   
   const initialFormState: CorrectTextFormState = { 
     message: "", error: undefined, result: undefined, originalText: undefined 
   };
-  // Correctly use useActionState to get isCorrectionPending
   const [correctionFormState, correctionFormAction, isCorrectionPending] = useActionState<CorrectTextFormState, FormData>(
     handleCorrectText,
     initialFormState
@@ -95,6 +95,7 @@ export function BanglaCorrectorForm() {
         fileInputRef.current.value = "";
       }
       setSelectedFileName(null);
+      setFileReadingProgress(null);
       correctionForm.reset({ text: "" }); 
     } else { 
         setCorrectedText(undefined);
@@ -157,7 +158,6 @@ export function BanglaCorrectorForm() {
     });
   };
   
-  // RHF's handleSubmit calls this
   const onRHFSubmit = (data: z.infer<typeof formSchema>) => {
     const formData = new FormData();
     if (data.text) {
@@ -167,7 +167,6 @@ export function BanglaCorrectorForm() {
     if (fileInputRef.current?.files && fileInputRef.current.files[0]) {
       formData.append("file", fileInputRef.current.files[0]);
     } else if (!data.text) {
-      // This case should be caught by zod refine, but as a safeguard:
       correctionForm.setError("root", { message: "অনুগ্রহ করে টেক্সট লিখুন অথবা একটি ফাইল আপলোড করুন।"});
       toast({
         variant: "destructive",
@@ -182,8 +181,8 @@ export function BanglaCorrectorForm() {
     setQualityScore(undefined);
     setExplanationOfScore(undefined);
     setProcessedSourceText(undefined);
+    setFileReadingProgress(null);
 
-    // Call the action from useActionState directly, wrapped in startTransition
     startTransition(() => {
       correctionFormAction(formData);
     });
@@ -192,12 +191,41 @@ export function BanglaCorrectorForm() {
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
-      setSelectedFileName(event.target.files[0].name);
+      const file = event.target.files[0];
+      setSelectedFileName(file.name);
+      setFileReadingProgress(0); // Initialize progress
+
+      const reader = new FileReader();
+      reader.onprogress = (e) => {
+        if (e.lengthComputable) {
+          const progress = Math.round((e.loaded / e.total) * 100);
+          setFileReadingProgress(progress);
+        }
+      };
+      reader.onload = () => {
+        setFileReadingProgress(100);
+        setTimeout(() => setFileReadingProgress(null), 1500); // Hide after 1.5s
+      };
+      reader.onerror = () => {
+        setFileReadingProgress(null);
+        toast({
+          variant: "destructive",
+          title: "ফাইল পড়তে সমস্যা",
+          description: "ফাইলটি পড়া সম্ভব হচ্ছে না। অন্য ফাইল চেষ্টা করুন।",
+        });
+        if (fileInputRef.current) {
+            fileInputRef.current.value = ""; // Reset file input on error
+        }
+        setSelectedFileName(null);
+      };
+      reader.readAsArrayBuffer(file);
+
       correctionForm.setValue("text", ""); 
       correctionForm.clearErrors("text"); 
       correctionForm.clearErrors("root");
     } else {
       setSelectedFileName(null);
+      setFileReadingProgress(null);
     }
   };
 
@@ -207,6 +235,7 @@ export function BanglaCorrectorForm() {
       fileInputRef.current.value = ""; 
     }
     setSelectedFileName(null);
+    setFileReadingProgress(null);
     correctionForm.clearErrors(); 
     setCorrectedText(undefined);
     setExplanationOfCorrections(undefined);
@@ -214,9 +243,6 @@ export function BanglaCorrectorForm() {
     setExplanationOfScore(undefined);
     setProcessedSourceText(undefined);
     
-    // Optionally reset the action state if needed, though it usually resets on new action.
-    // For now, just clearing UI state.
-
     toast({ 
         title: "ইনপুট মুছে ফেলা হয়েছে", 
         description: "টেক্সটবক্স এবং ফাইল ইনপুট পরিষ্কার করা হয়েছে। ফলাফলও মুছে ফেলা হয়েছে।" 
@@ -283,10 +309,16 @@ export function BanglaCorrectorForm() {
                     )}
                 />
               </div>
-              {selectedFileName && (
-                <p className="text-sm text-muted-foreground font-body flex items-center mt-1">
-                  <FileText className="mr-2 h-4 w-4 text-primary" strokeWidth={1.5} /> নির্বাচিত ফাইল: {selectedFileName}
-                </p>
+              {selectedFileName && fileReadingProgress !== null && (
+                <div className="mt-2 space-y-1">
+                  <Label htmlFor="file-read-progress-corrector" className="text-sm font-body text-muted-foreground">ফাইল লোড হচ্ছে: {selectedFileName}</Label>
+                  <Progress id="file-read-progress-corrector" value={fileReadingProgress} className="w-full h-2 [&>div]:bg-primary" />
+                </div>
+              )}
+              {selectedFileName && fileReadingProgress === null && !isCorrectionPending && (
+                 <p className="text-sm text-muted-foreground font-body flex items-center mt-1">
+                    <FileText className="mr-2 h-4 w-4 text-primary" strokeWidth={1.5} /> ফাইল প্রস্তুত: {selectedFileName}
+                 </p>
               )}
                {correctionForm.formState.errors.file && (
                 <p className="text-sm text-destructive font-body flex items-center">
@@ -311,7 +343,6 @@ export function BanglaCorrectorForm() {
                 <Trash2 className="mr-2 h-4 w-4" strokeWidth={1.5} />
                 ইনপুট ও ফলাফল মুছুন
             </Button>
-            {/* Pass isCorrectionPending to SubmitButton */}
             <SubmitButton className="w-full sm:w-auto" isPending={isCorrectionPending} />
           </CardFooter>
         </form>

@@ -2,7 +2,6 @@
 "use client";
 
 import { useState, useEffect, useRef, useActionState, useTransition } from "react";
-// Removed useTransition as useActionState handles transitions for its action
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
@@ -22,6 +21,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { Copy, AlertCircle, CheckCircle, Sparkles, FileText, DownloadCloud, Trash2, ScrollText } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -48,6 +48,7 @@ export function BanglaSummarizerForm() {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
+  const [fileReadingProgress, setFileReadingProgress] = useState<number | null>(null);
   
   const initialFormState: SummarizeTextFormState = { 
     message: "", error: undefined, result: undefined, originalText: undefined 
@@ -86,6 +87,7 @@ export function BanglaSummarizerForm() {
         fileInputRef.current.value = "";
       }
       setSelectedFileName(null);
+      setFileReadingProgress(null);
       summarizationForm.reset({ text: "" }); 
     } else { 
         setSummary(undefined);
@@ -162,6 +164,7 @@ export function BanglaSummarizerForm() {
     
     setSummary(undefined);
     setProcessedSourceText(undefined);
+    setFileReadingProgress(null);
     
     startTransition(() => {
       summarizeFormAction(formData);
@@ -171,12 +174,41 @@ export function BanglaSummarizerForm() {
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
-      setSelectedFileName(event.target.files[0].name);
+      const file = event.target.files[0];
+      setSelectedFileName(file.name);
+      setFileReadingProgress(0); // Initialize progress
+
+      const reader = new FileReader();
+      reader.onprogress = (e) => {
+        if (e.lengthComputable) {
+          const progress = Math.round((e.loaded / e.total) * 100);
+          setFileReadingProgress(progress);
+        }
+      };
+      reader.onload = () => {
+        setFileReadingProgress(100);
+        setTimeout(() => setFileReadingProgress(null), 1500); // Hide after 1.5s
+      };
+      reader.onerror = () => {
+        setFileReadingProgress(null);
+        toast({
+          variant: "destructive",
+          title: "ফাইল পড়তে সমস্যা",
+          description: "ফাইলটি পড়া সম্ভব হচ্ছে না। অন্য ফাইল চেষ্টা করুন।",
+        });
+        if (fileInputRef.current) {
+            fileInputRef.current.value = ""; // Reset file input on error
+        }
+        setSelectedFileName(null);
+      };
+      reader.readAsArrayBuffer(file);
+      
       summarizationForm.setValue("text", ""); 
       summarizationForm.clearErrors("text"); 
       summarizationForm.clearErrors("root");
     } else {
       setSelectedFileName(null);
+      setFileReadingProgress(null);
     }
   };
 
@@ -186,6 +218,7 @@ export function BanglaSummarizerForm() {
       fileInputRef.current.value = ""; 
     }
     setSelectedFileName(null);
+    setFileReadingProgress(null);
     summarizationForm.clearErrors(); 
     setSummary(undefined);
     setProcessedSourceText(undefined);
@@ -256,10 +289,16 @@ export function BanglaSummarizerForm() {
                     )}
                 />
               </div>
-              {selectedFileName && (
-                <p className="text-sm text-muted-foreground font-body flex items-center mt-1">
-                  <FileText className="mr-2 h-4 w-4 text-primary" strokeWidth={1.5} /> নির্বাচিত ফাইল: {selectedFileName}
-                </p>
+              {selectedFileName && fileReadingProgress !== null && (
+                <div className="mt-2 space-y-1">
+                  <Label htmlFor="file-read-progress-summarizer" className="text-sm font-body text-muted-foreground">ফাইল লোড হচ্ছে: {selectedFileName}</Label>
+                  <Progress id="file-read-progress-summarizer" value={fileReadingProgress} className="w-full h-2 [&>div]:bg-primary" />
+                </div>
+              )}
+              {selectedFileName && fileReadingProgress === null && !isSubmittingSummarization && (
+                 <p className="text-sm text-muted-foreground font-body flex items-center mt-1">
+                    <FileText className="mr-2 h-4 w-4 text-primary" strokeWidth={1.5} /> ফাইল প্রস্তুত: {selectedFileName}
+                 </p>
               )}
                {summarizationForm.formState.errors.file && (
                 <p className="text-sm text-destructive font-body flex items-center">
@@ -352,3 +391,4 @@ export function BanglaSummarizerForm() {
     </div>
   );
 }
+
