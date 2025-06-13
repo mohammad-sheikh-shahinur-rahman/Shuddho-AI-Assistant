@@ -8,7 +8,6 @@ import { summarizeBanglaText, type SummarizeBanglaTextInput } from "@/ai/flows/s
 import { languageExpertChat, type LanguageExpertChatInput, type LanguageExpertChatOutput } from "@/ai/flows/language-expert-chat";
 import { translateText, type TranslateTextInput } from "@/ai/flows/translate-text-flow";
 import { analyzeText, type AnalyzeTextInput, type AnalyzeTextOutput } from "@/ai/flows/analyze-text-flow";
-// import mammoth from "mammoth"; // Removed static import
 
 
 export type CorrectTextFormState = {
@@ -42,9 +41,9 @@ export async function handleCorrectText(
       }
 
       if (fileInput.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" || fileInput.name.endsWith(".docx")) {
-        const mammoth = (await import("mammoth")).default;
+        const mammothModule = await import("mammoth");
         const nodeBuffer = Buffer.from(arrayBuffer);
-        const { value } = await mammoth.extractRawText({ buffer: nodeBuffer });
+        const { value } = await mammothModule.extractRawText({ buffer: nodeBuffer });
         textToCorrect = value;
       } else if (fileInput.type === "application/pdf" || fileInput.name.endsWith(".pdf")) {
         const pdf = (await import("pdf-parse")).default;
@@ -131,9 +130,9 @@ export async function handleSummarizeText(
       }
 
       if (fileInput.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" || fileInput.name.endsWith(".docx")) {
-        const mammoth = (await import("mammoth")).default;
+        const mammothModule = await import("mammoth");
         const nodeBuffer = Buffer.from(arrayBuffer);
-        const { value } = await mammoth.extractRawText({ buffer: nodeBuffer });
+        const { value } = await mammothModule.extractRawText({ buffer: nodeBuffer });
         textToSummarize = value;
       } else if (fileInput.type === "application/pdf" || fileInput.name.endsWith(".pdf")) {
         const pdf = (await import("pdf-parse")).default;
@@ -348,9 +347,9 @@ export async function handleAnalyzeText(
       }
 
       if (fileInput.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" || fileInput.name.endsWith(".docx")) {
-        const mammoth = (await import("mammoth")).default;
+        const mammothModule = await import("mammoth");
         const nodeBuffer = Buffer.from(arrayBuffer);
-        const { value } = await mammoth.extractRawText({ buffer: nodeBuffer });
+        const { value } = await mammothModule.extractRawText({ buffer: nodeBuffer });
         textToAnalyze = value;
       } else if (fileInput.type === "application/pdf" || fileInput.name.endsWith(".pdf")) {
         const pdf = (await import("pdf-parse")).default;
@@ -393,3 +392,4 @@ export async function handleAnalyzeText(
     return { error: `AI প্রসেসিং-এ একটি সমস্যা হয়েছে: ${errorMessage} অনুগ্রহ করে আবার চেষ্টা করুন।` };
   }
 }
+
