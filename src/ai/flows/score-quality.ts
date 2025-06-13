@@ -60,6 +60,9 @@ const scoreQualityFlow = ai.defineFlow(
   },
   async input => {
     const {output} = await prompt(input);
-    return output!;
+    if (!output) {
+      throw new Error("AI মডেল থেকে কোনো বিশ্লেষণ পাওয়া যায়নি বা উত্তরটি সঠিক ফরম্যাটে নেই।");
+    }
+    return output;
   }
 );

@@ -22,7 +22,7 @@ const CorrectBanglaTextOutputSchema = z.object({
   explanationOfCorrections: z
     .string()
     .describe('A detailed explanation of the corrections made to the text.')
-    .optional(), // Made optional
+    .optional(),
 });
 export type CorrectBanglaTextOutput = z.infer<typeof CorrectBanglaTextOutputSchema>;
 
@@ -60,6 +60,9 @@ const correctBanglaTextFlow = ai.defineFlow(
   },
   async input => {
     const {output} = await prompt(input);
-    return output!;
+    if (!output) {
+      throw new Error("AI মডেল থেকে কোনো বিশ্লেষণ পাওয়া যায়নি বা উত্তরটি সঠিক ফরম্যাটে নেই।");
+    }
+    return output;
   }
 );
