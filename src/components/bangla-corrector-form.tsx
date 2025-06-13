@@ -1,8 +1,8 @@
 
 "use client";
 
-import { useState, useEffect, useRef, useActionState } from "react";
-// Removed useTransition and useFormStatus as useActionState handles pending state
+import { useState, useEffect, useRef, useActionState, useTransition } from "react";
+// Removed useFormStatus as useActionState handles pending state
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
@@ -58,6 +58,7 @@ export function BanglaCorrectorForm() {
     handleCorrectText,
     initialFormState
   );
+  const [, startTransition] = useTransition();
 
   const correctionForm = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -182,8 +183,10 @@ export function BanglaCorrectorForm() {
     setExplanationOfScore(undefined);
     setProcessedSourceText(undefined);
 
-    // Call the action from useActionState directly
-    correctionFormAction(formData);
+    // Call the action from useActionState directly, wrapped in startTransition
+    startTransition(() => {
+      correctionFormAction(formData);
+    });
   };
 
 
@@ -415,3 +418,4 @@ export function BanglaCorrectorForm() {
     </div>
   );
 }
+
