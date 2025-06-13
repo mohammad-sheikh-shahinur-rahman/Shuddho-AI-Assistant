@@ -3,17 +3,13 @@
 
 import { z } from "zod";
 import { correctBanglaText, type CorrectBanglaTextInput, type CorrectBanglaTextOutput } from "@/ai/flows/correct-bangla-text";
-import { adjustTone as adjustToneFlow, type AdjustToneInput, type AdjustToneOutput } from "@/ai/flows/adjust-tone";
 import mammoth from "mammoth";
 // Static import of pdf-parse is removed. It will be dynamically imported below.
 
 // Schema for the form data validation coming from client (for handleCorrectText)
-// This schema is not directly used by Zod in handleCorrectText as FormData is handled manually.
-// It's more of a conceptual guide for what's expected.
 const ClientFormSchema = z.object({
   text: z.string().optional(),
   file: z.custom<File>((val) => val instanceof File, "অনুগ্রহ করে একটি ফাইল নির্বাচন করুন।").optional(),
-  tone: z.enum(['Formal', 'Friendly', 'Poetic']),
 });
 
 
@@ -29,12 +25,7 @@ export async function handleCorrectText(
   formData: FormData
 ): Promise<CorrectTextFormState> {
   const textInput = formData.get("text") as string | null;
-  const toneInput = formData.get("tone") as 'Formal' | 'Friendly' | 'Poetic' | null;
   const fileInput = formData.get("file") as File | null;
-
-  if (!toneInput || !['Formal', 'Friendly', 'Poetic'].includes(toneInput)) {
-    return { error: "অনুগ্রহ করে একটি টোন নির্বাচন করুন।" };
-  }
 
   let textToCorrect: string | undefined = textInput?.trim() || undefined;
   let source = "টেক্সটবক্স";
@@ -73,7 +64,6 @@ export async function handleCorrectText(
 
   const inputForAI: CorrectBanglaTextInput = {
     text: textToCorrect,
-    tone: toneInput,
   };
 
   try {
@@ -85,47 +75,3 @@ export async function handleCorrectText(
     return { error: `টেক্সট শুদ্ধ করতে একটি সমস্যা হয়েছে: ${errorMessage} অনুগ্রহ করে আবার চেষ্টা করুন।` };
   }
 }
-
-const AdjustToneSchema = z.object({
-  textToAdjust: z.string().min(1, "সমন্বয় করার জন্য কোনো টেক্সট নেই।"),
-  newTone: z.enum(['Formal', 'Friendly', 'Poetic']),
-});
-
-export type AdjustToneFormState = {
-  result?: AdjustToneOutput;
-  error?: string;
-  message?: string;
-};
-
-export async function handleAdjustTone(
-  prevState: AdjustToneFormState,
-  formData: FormData
-): Promise<AdjustToneFormState> {
-  const validatedFields = AdjustToneSchema.safeParse({
-    textToAdjust: formData.get("textToAdjust"),
-    newTone: formData.get("newTone") as 'Formal' | 'Friendly' | 'Poetic',
-  });
-
-  if (!validatedFields.success) {
-    return {
-      error: validatedFields.error.flatten().fieldErrors.textToAdjust?.[0] ||
-             validatedFields.error.flatten().fieldErrors.newTone?.[0] ||
-             "টোন সমন্বয় ফর্ম ডেটা অবৈধ।",
-    };
-  }
-
-  const input: AdjustToneInput = {
-    text: validatedFields.data.textToAdjust,
-    tone: validatedFields.data.newTone,
-  };
-
-  try {
-    const result = await adjustToneFlow(input);
-    return { result };
-  } catch (e) {
-    console.error("AI Tone Adjustment Error:", e);
-    const errorMessage = e instanceof Error ? e.message : "অজানা ত্রুটি";
-    return { error: `টেক্সটের টোন পরিবর্তন করতে একটি সমস্যা হয়েছে: ${errorMessage} অনুগ্রহ করে আবার চেষ্টা করুন।` };
-  }
-}
-

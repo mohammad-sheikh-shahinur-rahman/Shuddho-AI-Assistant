@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -13,7 +14,6 @@ import {z} from 'genkit';
 
 const CorrectBanglaTextInputSchema = z.object({
   text: z.string().describe('The Bangla text to correct.'),
-  tone: z.enum(['Formal', 'Friendly', 'Poetic']).default('Friendly').describe('The desired tone of the corrected text.'),
 });
 export type CorrectBanglaTextInput = z.infer<typeof CorrectBanglaTextInputSchema>;
 
@@ -32,7 +32,7 @@ const prompt = ai.definePrompt({
   name: 'correctBanglaTextPrompt',
   input: {schema: CorrectBanglaTextInputSchema},
   output: {schema: CorrectBanglaTextOutputSchema},
-  prompt: `তুমি একজন বাংলা ভাষা বিশেষজ্ঞ। নিচের লেখাটি ব্যাকরণ ও বানান ঠিক করে লেখো এবং ব্যাখ্যা দাও। টোন হিসেবে {{tone}} ব্যবহার করো।
+  prompt: `তুমি একজন বাংলা ভাষা বিশেষজ্ঞ। নিচের লেখাটি ব্যাকরণ ও বানান ঠিক করে লেখো এবং ব্যাখ্যা দাও।
   লেখা:
   """
   {{{text}}}
