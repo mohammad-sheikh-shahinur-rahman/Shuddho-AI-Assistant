@@ -31,14 +31,13 @@ try {
   }
 } catch (e) {
   const errorMessage = e instanceof Error ? e.message : String(e);
-  console.error(
-    "CRITICAL ERROR DURING GENKIT INITIALIZATION in src/ai/genkit.ts:",
-    `This often indicates an issue with your GEMINI_API_KEY (e.g., invalid, incorrect permissions, billing not enabled) or the AI service configuration. Please verify your API key and Google Cloud project settings. Original error: ${errorMessage}`,
-    e // Log the original error object for more details
-  );
-  // Re-throwing the original error might give Next.js more context.
-  throw e;
+  const errorStack = e instanceof Error && e.stack ? e.stack : 'No stack trace available.';
+  const detailedError = `CRITICAL GENKIT INIT FAILURE in src/ai/genkit.ts: ${errorMessage}. This often indicates an issue with your GEMINI_API_KEY (e.g., invalid, incorrect permissions, billing not enabled for the associated Google Cloud project) or the AI service configuration. Please verify your API key and Google Cloud project settings. Original error stack: ${errorStack}`;
+  
+  console.error(detailedError, e); // Log the detailed message and the original error object
+
+  // Throw a new error with the detailed message. This might give Next.js more specific error text to display.
+  throw new Error(detailedError); 
 }
 
 export { ai }; // Export the singleton instance
-
