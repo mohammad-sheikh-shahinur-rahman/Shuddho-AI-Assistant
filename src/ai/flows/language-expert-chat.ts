@@ -55,7 +55,7 @@ const languageExpertChatFlow = ai.defineFlow(
   },
   async (input) => {
     const llmResponse = await prompt(input);
-    const output = llmResponse.output();
+    const output = llmResponse.output; 
     if (!output) {
         return {response: "দুঃখিত, আমি এই মুহূর্তে উত্তর দিতে পারছি না। অনুগ্রহ করে কিছুক্ষণ পর আবার চেষ্টা করুন।"}
     }
