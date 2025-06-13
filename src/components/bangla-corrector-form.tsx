@@ -33,7 +33,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { Copy, Briefcase, Smile, Feather, AlertCircle, CheckCircle, Info, Sparkles, Palette, UploadCloud, FileText } from "lucide-react";
+import { Copy, Briefcase, Smile, Feather, AlertCircle, CheckCircle, Info, Sparkles, Palette, FileText, DownloadCloud, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const formSchema = z.object({
@@ -64,10 +64,10 @@ const toneOptions: ToneOption[] = [
   { value: "Poetic", label: "কাব্যিক", icon: Feather },
 ];
 
-function SubmitButton() {
+function SubmitButton({ className }: { className?: string }) {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" disabled={pending} className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground">
+    <Button type="submit" disabled={pending} className={cn("w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground", className)}>
       {pending ? "লোড হচ্ছে..." : "শুদ্ধ করুন"}
       {!pending && <Sparkles className="ml-2 h-4 w-4" />}
     </Button>
@@ -137,15 +137,10 @@ export function BanglaCorrectorForm() {
       if(correctionFormState.originalText) {
         setProcessedSourceText(correctionFormState.originalText);
       }
-      // Reset file input
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
       setSelectedFileName(null);
-      // Optionally clear textarea if file was processed
-      // correctionForm.reset({ text: "", tone: correctionForm.getValues("tone") });
-
-
     }
     if (correctionFormState.error) {
        toast({
@@ -190,6 +185,31 @@ export function BanglaCorrectorForm() {
       });
     }
   };
+
+  const handleDownloadText = (text: string | undefined, baseFilename: string) => {
+    if (!text) {
+      toast({
+        variant: "destructive",
+        title: "ডাউনলোড ত্রুটি",
+        description: "ডাউনলোড করার জন্য কোনো লেখা নেই।",
+      });
+      return;
+    }
+    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    const dateStamp = new Date().toISOString().split('T')[0];
+    link.download = `${baseFilename}_${dateStamp}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+    toast({
+      title: "ডাউনলোড শুরু হয়েছে",
+      description: `${link.download} ফাইলটি ডাউনলোড হচ্ছে।`,
+      action: <CheckCircle className="text-green-500" />,
+    });
+  };
   
   const handleFormSubmit = (data: z.infer<typeof formSchema>) => {
     const formData = new FormData();
@@ -205,7 +225,6 @@ export function BanglaCorrectorForm() {
       return;
     }
     
-    // Clear previous results before new submission
     setCorrectedText(undefined);
     setExplanation(undefined);
     setQualityScore(undefined);
@@ -218,11 +237,22 @@ export function BanglaCorrectorForm() {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
       setSelectedFileName(event.target.files[0].name);
-      // Optionally clear textarea when a file is selected
-      // correctionForm.setValue("text", ""); 
     } else {
       setSelectedFileName(null);
     }
+  };
+
+  const handleClearInputs = () => {
+    correctionForm.reset({ text: "", tone: correctionForm.getValues("tone") });
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+    setSelectedFileName(null);
+    correctionForm.clearErrors(); // Clear any existing validation errors
+    toast({ 
+        title: "ইনপুট মুছে ফেলা হয়েছে", 
+        description: "টেক্সটবক্স এবং ফাইল ইনপুট পরিষ্কার করা হয়েছে।" 
+    });
   };
 
 
@@ -316,7 +346,16 @@ export function BanglaCorrectorForm() {
               )}
             </div>
           </CardContent>
-          <CardFooter>
+          <CardFooter className="flex flex-col sm:flex-row gap-2 pt-4">
+            <Button 
+                type="button" 
+                variant="outline" 
+                onClick={handleClearInputs}
+                className="w-full sm:w-auto"
+            >
+                <Trash2 className="mr-2 h-4 w-4" />
+                ইনপুট মুছুন
+            </Button>
             <SubmitButton />
           </CardFooter>
         </form>
@@ -346,15 +385,25 @@ export function BanglaCorrectorForm() {
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <Label htmlFor="correctedText" className="font-body text-lg">সংশোধিত লেখা</Label>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleCopyToClipboard(correctedText, "সংশোধিত লেখা")}
-                    className="text-accent-foreground hover:bg-accent/80"
-                  >
-                    <Copy className="mr-2 h-4 w-4" />
-                    কপি করুন
-                  </Button>
+                  <div className="flex space-x-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleCopyToClipboard(correctedText, "সংশোধিত লেখা")}
+                      className="text-accent-foreground hover:bg-accent/80"
+                    >
+                      <Copy className="mr-2 h-4 w-4" />
+                      কপি করুন
+                    </Button>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDownloadText(correctedText, "সংশোধিত_লেখা")}
+                    >
+                        <DownloadCloud className="mr-2 h-4 w-4" />
+                        ডাউনলোড
+                    </Button>
+                  </div>
                 </div>
                 <Textarea
                   id="correctedText"
@@ -459,15 +508,25 @@ export function BanglaCorrectorForm() {
              <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <Label htmlFor="toneAdjustedTextOutput" className="font-body text-lg">চূড়ান্ত লেখা (টোন পরিবর্তিত)</Label>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleCopyToClipboard(toneAdjustedText, "টোন পরিবর্তিত লেখা")}
-                    className="text-accent-foreground hover:bg-accent/80"
-                  >
-                    <Copy className="mr-2 h-4 w-4" />
-                    কপি করুন
-                  </Button>
+                  <div className="flex space-x-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleCopyToClipboard(toneAdjustedText, "টোন পরিবর্তিত লেখা")}
+                      className="text-accent-foreground hover:bg-accent/80"
+                    >
+                      <Copy className="mr-2 h-4 w-4" />
+                      কপি করুন
+                    </Button>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDownloadText(toneAdjustedText, "টোন_পরিবর্তিত_লেখা")}
+                    >
+                        <DownloadCloud className="mr-2 h-4 w-4" />
+                        ডাউনলোড
+                    </Button>
+                  </div>
                 </div>
                 <Textarea
                   id="toneAdjustedTextOutput"
@@ -480,7 +539,6 @@ export function BanglaCorrectorForm() {
               <Button variant="outline" onClick={() => {
                 setToneAdjustedText(undefined); 
                 toneAdjustForm.reset(); 
-                // Do not clear correctedText here, so user can try another tone for the same corrected text
               }}>
                 অন্য টোন চেষ্টা করুন
               </Button>

@@ -5,7 +5,7 @@ import { z } from "zod";
 import { correctBanglaText, type CorrectBanglaTextInput, type CorrectBanglaTextOutput } from "@/ai/flows/correct-bangla-text";
 import { adjustTone as adjustToneFlow, type AdjustToneInput, type AdjustToneOutput } from "@/ai/flows/adjust-tone";
 import mammoth from "mammoth";
-import pdf from "pdf-parse"; // pdf-parse is a default export
+import pdfParser from "pdf-parse"; // Changed import name for clarity, pdf-parse is typically used with a default-like import with esModuleInterop
 
 // Schema for the form data validation coming from client (for handleCorrectText)
 // This schema is not directly used by Zod in handleCorrectText as FormData is handled manually.
@@ -43,11 +43,15 @@ export async function handleCorrectText(
     source = fileInput.name;
     try {
       const arrayBuffer = await fileInput.arrayBuffer();
+      if (arrayBuffer.byteLength === 0) {
+        return { error: `ফাইল (${fileInput.name}) খালি অথবা পড়া যাচ্ছে না। অনুগ্রহ করে একটি সঠিক ফাইল আপলোড করুন।` };
+      }
+
       if (fileInput.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" || fileInput.name.endsWith(".docx")) {
         const { value } = await mammoth.extractRawText({ arrayBuffer });
         textToCorrect = value;
       } else if (fileInput.type === "application/pdf" || fileInput.name.endsWith(".pdf")) {
-        const data = await pdf(Buffer.from(arrayBuffer));
+        const data = await pdfParser(Buffer.from(arrayBuffer));
         textToCorrect = data.text;
       } else if (fileInput.type === "text/plain" || fileInput.name.endsWith(".txt")) {
         textToCorrect = Buffer.from(arrayBuffer).toString("utf-8");
@@ -122,3 +126,4 @@ export async function handleAdjustTone(
     return { error: `টেক্সটের টোন পরিবর্তন করতে একটি সমস্যা হয়েছে: ${errorMessage} অনুগ্রহ করে আবার চেষ্টা করুন।` };
   }
 }
+
