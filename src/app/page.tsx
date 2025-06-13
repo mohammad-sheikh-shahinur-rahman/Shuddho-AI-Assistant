@@ -1,6 +1,6 @@
 
 import { BanglaCorrectorForm } from "@/components/bangla-corrector-form";
-import { BookOpen } from "lucide-react";
+import { BookOpen, Coins } from "lucide-react";
 import Link from 'next/link';
 
 export default function Home() {
@@ -22,7 +22,11 @@ export default function Home() {
         <p className="text-sm text-muted-foreground font-body">
           <Link href="/about" className="hover:text-primary hover:underline">আমাদের সম্পর্কে</Link>
           <span className="mx-2">|</span>
-          &copy; {new Date().getFullYear()} শুদ্ধ AI প্রুফরিডার. <Link href="/about#developer-profile" className="hover:text-primary hover:underline">মোহাম্মদ শেখ শাহিনুর রহমান</Link> কর্তৃক তৈরি।
+          <Link href="/donate" className="hover:text-primary hover:underline flex items-center justify-center sm:inline-flex">
+            <Coins className="mr-1 h-4 w-4" strokeWidth={1.5} /> আমাদের সহযোগিতা করুন
+          </Link>
+          <span className="mx-2">|</span>
+          &copy; {new Date().getFullYear()} শুদ্ধ AI প্রুফরিডার।
         </p>
       </footer>
     </main>

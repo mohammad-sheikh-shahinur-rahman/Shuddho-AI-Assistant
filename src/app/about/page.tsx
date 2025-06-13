@@ -1,9 +1,8 @@
 
-import { Users, Lightbulb, Target, UserCircle, Link as LinkIcon, Gift, Mail } from 'lucide-react';
+import { Users, Lightbulb, Target, Link as LinkIcon, Gift, Mail, Building, HeartHandshake } from 'lucide-react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
 export default function AboutPage() {
   return (
@@ -16,7 +15,7 @@ export default function AboutPage() {
           আমাদের সম্পর্কে
         </h1>
         <p className="font-body text-lg text-muted-foreground mt-3 max-w-xl mx-auto">
-          শুদ্ধ AI প্রুফরিডার-এর পেছনের কথা এবং নির্মাতার পরিচিতি।
+          শুদ্ধ AI প্রুফরিডার-এর পেছনের কথা, লক্ষ্য এবং আমাদের সহযোগী প্রতিষ্ঠানসমূহ।
         </p>
       </header>
 
@@ -47,50 +46,45 @@ export default function AboutPage() {
           </CardContent>
         </Card>
 
-        <Card id="developer-profile" className="shadow-md hover:shadow-lg transition-shadow duration-300">
+        <Card id="amadersomaj-prokashoni" className="shadow-md hover:shadow-lg transition-shadow duration-300">
           <CardHeader>
             <CardTitle className="font-headline text-2xl font-semibold mb-2 flex items-center">
-              <UserCircle className="h-7 w-7 mr-3 text-primary" strokeWidth={1.5} /> ডেভেলপার পরিচিতি
+              <Building className="h-7 w-7 mr-3 text-primary" strokeWidth={1.5} /> আমাদের সমাজ প্রকাশনী
             </CardTitle>
           </CardHeader>
-          <CardContent className="font-body text-base sm:text-lg text-card-foreground">
-            <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
-              <div className="flex-shrink-0">
-                <Image
-                  src="https://m.media-amazon.com/images/S/amzn-author-media-prod/b02mvc2hucu96hchlksdjmogii._SY450_CR0%2C0%2C450%2C450_.jpg"
-                  alt="মোহাম্মদ শেখ শাহিনুর রহমান"
-                  width={180}
-                  height={180}
-                  className="rounded-lg shadow-md border-2 border-primary/30"
-                  data-ai-hint="portrait person"
-                />
-              </div>
-              <div className="text-center md:text-left flex-grow">
-                <h3 className="font-headline text-2xl font-bold text-foreground">মোহাম্মদ শেখ শাহিনুর রহমান</h3>
-                <p className="text-primary font-semibold mt-1">
-                  কবি • লেখক • সফটওয়্যার ইঞ্জিনিয়ার • প্রোগ্রামার • ডিজিটাল ফরেনসিক বিশেষজ্ঞ • প্রযুক্তি উদ্ভাবক
-                </p>
-                <p className="mt-3 text-muted-foreground leading-relaxed">
-                  মোহাম্মদ শেখ শাহিনুর রহমান একজন বহুমাত্রিক প্রতিভার অধিকারী ব্যক্তিত্ব, যিনি একাধারে সাহিত্য ও প্রযুক্তির বিভিন্ন শাখায় অবদান রেখে চলেছেন। তার উদ্ভাবনী ক্ষমতা এবং সৃষ্টিশীল কাজের মাধ্যমে তিনি বাংলা ভাষা ও প্রযুক্তিকে সমৃদ্ধ করার প্রয়াসে নিয়োজিত।
-                </p>
-                <div className="mt-4">
-                  <h4 className="font-semibold text-card-foreground mb-1 flex items-center justify-center md:justify-start">
+          <CardContent className="font-body text-base sm:text-lg text-card-foreground leading-relaxed">
+            <p>
+              আমাদের সমাজ প্রকাশনী একটি সৃজনশীল এবং মননশীল প্রকাশনা সংস্থা। আমরা বাংলা সাহিত্য ও সংস্কৃতিকে সমৃদ্ধ করার লক্ষ্যে কাজ করে যাচ্ছি। আমাদের প্রকাশিত বইগুলো বিভিন্ন পাঠকশ্রেণির মন জয় করেছে।
+            </p>
+            {/* আপনি এখানে আরও বিস্তারিত তথ্য যোগ করতে পারেন */}
+            <div className="mt-4">
+                <h4 className="font-semibold text-card-foreground mb-1 flex items-center">
                     <LinkIcon className="h-5 w-5 mr-2 text-primary/80" strokeWidth={1.5} /> আরও জানুন:
-                  </h4>
-                  <ul className="space-y-1 text-primary">
+                </h4>
+                <ul className="space-y-1 text-primary">
                     <li>
-                      <a href="https://mohammad-sheikh-shahinur-rahman.vercel.app/" target="_blank" rel="noopener noreferrer" className="hover:underline hover:text-primary/80 transition-colors duration-200">
-                        ব্যক্তিগত ওয়েবসাইট (mohammad-sheikh-shahinur-rahman.vercel.app)
-                      </a>
+                    <a href="https://amadersomaj.com" target="_blank" rel="noopener noreferrer" className="hover:underline hover:text-primary/80 transition-colors duration-200">
+                        অফিসিয়াল ওয়েবসাইট (amadersomaj.com)
+                    </a>
                     </li>
-                    <li>
-                      <a href="https://shahinur.amadersomaj.com" target="_blank" rel="noopener noreferrer" className="hover:underline hover:text-primary/80 transition-colors duration-200">
-                        আমাদের সমাজ (shahinur.amadersomaj.com)
-                      </a>
-                    </li>
-                  </ul>
-                </div>
-              </div>
+                </ul>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card id="montaj-fatema-foundation" className="shadow-md hover:shadow-lg transition-shadow duration-300">
+          <CardHeader>
+            <CardTitle className="font-headline text-2xl font-semibold mb-2 flex items-center">
+              <HeartHandshake className="h-7 w-7 mr-3 text-primary" strokeWidth={1.5} /> মন্তাজ ফাতেমা ফাউন্ডেশন
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="font-body text-base sm:text-lg text-card-foreground leading-relaxed">
+            <p>
+              মন্তাজ ফাতেমা ফাউন্ডেশন একটি অলাভজনক প্রতিষ্ঠান যা শিক্ষা, স্বাস্থ্য এবং সামাজিক উন্নয়নে নিবেদিত। আমরা সমাজের পিছিয়ে পড়া জনগোষ্ঠীর জীবনমান উন্নয়নে বিভিন্ন প্রকল্প বাস্তবায়ন করে থাকি।
+            </p>
+            {/* আপনি এখানে আরও বিস্তারিত তথ্য যোগ করতে পারেন */}
+             <div className="mt-4">
+                <p className="text-muted-foreground">যোগাযোগ বা আরও তথ্যের জন্য, অনুগ্রহ করে ইমেইল করুন: <a href="mailto:foundation@montajfatema.org" className="text-primary hover:underline">foundation@montajfatema.org</a></p>
             </div>
           </CardContent>
         </Card>
@@ -103,7 +97,7 @@ export default function AboutPage() {
           </CardHeader>
           <CardContent className="font-body text-base sm:text-lg text-card-foreground leading-relaxed">
             <p>
-              এই অ্যাপ্লিকেশনটি, <span className="font-semibold text-primary">শুদ্ধ AI প্রুফরিডার</span>, মোহাম্মদ শেখ শাহিনুর রহমান কর্তৃক তৈরি করা হয়েছে এবং এটি শিক্ষার্থী, লেখক, গবেষক এবং বাংলা ভাষা ব্যবহারকারী সকলের জন্য সম্পূর্ণ বিনামূল্যে ব্যবহারযোগ্য। আমাদের লক্ষ্য, ভাষার শুদ্ধতা চর্চায় সকলকে উৎসাহিত করা।
+              এই অ্যাপ্লিকেশনটি, <span className="font-semibold text-primary">শুদ্ধ AI প্রুফরিডার</span>, শিক্ষার্থী, লেখক, গবেষক এবং বাংলা ভাষা ব্যবহারকারী সকলের জন্য সম্পূর্ণ বিনামূল্যে ব্যবহারযোগ্য। আমাদের লক্ষ্য, ভাষার শুদ্ধতা চর্চায় সকলকে উৎসাহিত করা এবং বাংলা ভাষার ডিজিটাল রিসোর্স বৃদ্ধি করা।
             </p>
           </CardContent>
         </Card>
@@ -126,15 +120,19 @@ export default function AboutPage() {
         </Card>
       </section>
 
-      <div className="text-center mt-12">
+      <div className="text-center mt-12 space-x-4">
         <Button asChild variant="outline" size="lg">
           <Link href="/">হোমপেজে ফিরে যান</Link>
+        </Button>
+        <Button asChild variant="default" size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground">
+          <Link href="/donate">আমাদের সহযোগিতা করুন</Link>
         </Button>
       </div>
 
        <footer className="text-center mt-16 py-8 border-t border-border">
         <p className="text-sm text-muted-foreground font-body">
-          &copy; {new Date().getFullYear()} শুদ্ধ AI প্রুফরিডার (<Link href="#developer-profile" className="hover:text-primary hover:underline">মোহাম্মদ শেখ শাহিনুর রহমান</Link> কর্তৃক তৈরি)। সর্বস্বত্ব সংরক্ষিত।
+          &copy; {new Date().getFullYear()} শুদ্ধ AI প্রুফরিডার। সর্বস্বত্ব সংরক্ষিত।
+          <Link href="/donate" className="ml-2 text-primary hover:underline">আমাদের সহযোগিতা করুন</Link>
         </p>
       </footer>
     </main>
