@@ -1,9 +1,11 @@
+
 'use server';
 
 /**
- * @fileOverview This file contains the Genkit flow for scoring the quality of corrected Bangla text.
+ * @fileOverview This file contains the Genkit flow for scoring the quality of corrected Bangla text
+ * and providing an explanation for that score.
  *
- * - scoreQuality - A function that takes corrected text and returns a quality score.
+ * - scoreQuality - A function that takes corrected text and returns a quality score and its explanation.
  * - ScoreQualityInput - The input type for the scoreQuality function.
  * - ScoreQualityOutput - The return type for the scoreQuality function.
  */
@@ -22,7 +24,9 @@ const ScoreQualityOutputSchema = z.object({
   qualityScore: z
     .number()
     .describe('The quality score of the corrected text, out of 100.'),
-  explanation: z.string().optional().describe('Explanation of the score.'),
+  explanationOfScore: z
+    .string()
+    .describe('An explanation of why the text received this quality score.'),
 });
 export type ScoreQualityOutput = z.infer<typeof ScoreQualityOutputSchema>;
 
@@ -36,14 +40,14 @@ const prompt = ai.definePrompt({
   output: {schema: ScoreQualityOutputSchema},
   prompt: `You are an expert in Bangla language quality assessment.
 
-You will receive corrected Bangla text and provide a quality score out of 100, along with a brief explanation.
+You will receive corrected Bangla text and provide a quality score out of 100, along with a brief explanation for that score.
 
 Corrected Text: {{{correctedText}}}
 
-Respond with the quality score and explanation in the following format:
+Respond with the quality score and explanation for the score in the following format:
 {
   "qualityScore": <score>,
-    "explanation": <explanation>
+  "explanationOfScore": "<explanation for the score>"
 }
 `,
 });

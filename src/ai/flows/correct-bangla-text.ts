@@ -19,8 +19,9 @@ export type CorrectBanglaTextInput = z.infer<typeof CorrectBanglaTextInputSchema
 
 const CorrectBanglaTextOutputSchema = z.object({
   correctedText: z.string().describe('The corrected Bangla text.'),
-  explanation: z.string().describe('The explanation of the corrections made.'),
-  qualityScore: z.number().describe('The quality score of the corrected text (out of 100).'),
+  explanationOfCorrections: z
+    .string()
+    .describe('A detailed explanation of the corrections made to the text.'),
 });
 export type CorrectBanglaTextOutput = z.infer<typeof CorrectBanglaTextOutputSchema>;
 
@@ -32,16 +33,15 @@ const prompt = ai.definePrompt({
   name: 'correctBanglaTextPrompt',
   input: {schema: CorrectBanglaTextInputSchema},
   output: {schema: CorrectBanglaTextOutputSchema},
-  prompt: `তুমি একজন বাংলা ভাষা বিশেষজ্ঞ। নিচের লেখাটি ব্যাকরণ ও বানান ঠিক করে লেখো এবং ব্যাখ্যা দাও।
+  prompt: `তুমি একজন বাংলা ভাষা বিশেষজ্ঞ। নিচের লেখাটি ব্যাকরণ ও বানান ঠিক করে লেখো এবং কোন কোন পরিবর্তন করা হয়েছে তার বিস্তারিত ব্যাখ্যা দাও।
   লেখা:
   """
   {{{text}}}
   """
-  আউটপুট:
+  আউটপুট এর গঠন হবে নিম্নরূপ:
   {
   "correctedText": "শুদ্ধ বাংলা লেখা",
-  "explanation": "ব্যাখ্যা",
-  "qualityScore": 100
+  "explanationOfCorrections": "কোন কোন জায়গায় কি কি পরিবর্তন করা হয়েছে তার বিস্তারিত ব্যাখ্যা।"
   }
   `,
 });

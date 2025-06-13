@@ -2,22 +2,22 @@
 "use server";
 
 import { z } from "zod";
-import { correctBanglaText, type CorrectBanglaTextInput, type CorrectBanglaTextOutput } from "@/ai/flows/correct-bangla-text";
+import { correctBanglaText, type CorrectBanglaTextInput } from "@/ai/flows/correct-bangla-text";
+import { scoreQuality, type ScoreQualityInput } from "@/ai/flows/score-quality";
 import mammoth from "mammoth";
-// Static import of pdf-parse is removed. It will be dynamically imported below.
-
-// Schema for the form data validation coming from client (for handleCorrectText)
-const ClientFormSchema = z.object({
-  text: z.string().optional(),
-  file: z.custom<File>((val) => val instanceof File, "অনুগ্রহ করে একটি ফাইল নির্বাচন করুন।").optional(),
-});
+// pdf-parse will be dynamically imported below.
 
 
 export type CorrectTextFormState = {
-  result?: CorrectBanglaTextOutput;
+  result?: {
+    correctedText: string;
+    explanationOfCorrections: string;
+    qualityScore?: number;
+    explanationOfScore?: string;
+  };
   error?: string;
   message?: string;
-  originalText?: string; // To show what was processed
+  originalText?: string; 
 };
 
 export async function handleCorrectText(
@@ -42,7 +42,6 @@ export async function handleCorrectText(
         const { value } = await mammoth.extractRawText({ arrayBuffer });
         textToCorrect = value;
       } else if (fileInput.type === "application/pdf" || fileInput.name.endsWith(".pdf")) {
-        // Dynamically import pdf-parse
         const pdf = (await import("pdf-parse")).default;
         const data = await pdf(Buffer.from(arrayBuffer));
         textToCorrect = data.text;
@@ -62,16 +61,41 @@ export async function handleCorrectText(
     return { error: "অনুগ্রহ করে টেক্সটবক্সে কিছু লিখুন অথবা একটি (.docx, .pdf, .txt) ফাইল আপলোড করুন।" };
   }
 
-  const inputForAI: CorrectBanglaTextInput = {
+  const correctionInput: CorrectBanglaTextInput = {
     text: textToCorrect,
   };
 
   try {
-    const result = await correctBanglaText(inputForAI);
-    return { result, originalText: `"${source}" থেকে প্রাপ্ত লেখা`, message: `"${source}" থেকে প্রাপ্ত লেখা সফলভাবে সংশোধন করা হয়েছে।` };
+    // Step 1: Correct text and get explanation of corrections
+    const correctionResult = await correctBanglaText(correctionInput);
+    if (!correctionResult || !correctionResult.correctedText) {
+        return { error: "টেক্সট শুদ্ধ করা সম্ভব হয়নি। AI থেকে সঠিক উত্তর পাওয়া যায়নি।" };
+    }
+
+    const scoringInput: ScoreQualityInput = {
+      correctedText: correctionResult.correctedText,
+    };
+
+    // Step 2: Score the corrected text and get explanation of score
+    const scoringResult = await scoreQuality(scoringInput);
+     if (!scoringResult) {
+        return { error: "টেক্সটের গুণমান স্কোর করা সম্ভব হয়নি। AI থেকে সঠিক উত্তর পাওয়া যায়নি।" };
+    }
+
+
+    return { 
+      result: {
+        correctedText: correctionResult.correctedText,
+        explanationOfCorrections: correctionResult.explanationOfCorrections,
+        qualityScore: scoringResult.qualityScore,
+        explanationOfScore: scoringResult.explanationOfScore,
+      },
+      originalText: `"${source}" থেকে প্রাপ্ত লেখা`, 
+      message: `"${source}" থেকে প্রাপ্ত লেখা সফলভাবে সংশোধন ও মূল্যায়ন করা হয়েছে।` 
+    };
   } catch (e) {
-    console.error("AI Correction Error:", e);
+    console.error("AI Processing Error:", e);
     const errorMessage = e instanceof Error ? e.message : "অজানা ত্রুটি";
-    return { error: `টেক্সট শুদ্ধ করতে একটি সমস্যা হয়েছে: ${errorMessage} অনুগ্রহ করে আবার চেষ্টা করুন।` };
+    return { error: `AI প্রসেসিং-এ একটি সমস্যা হয়েছে: ${errorMessage} অনুগ্রহ করে আবার চেষ্টা করুন।` };
   }
 }

@@ -24,15 +24,15 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { Copy, AlertCircle, CheckCircle, Info, Sparkles, FileText, DownloadCloud, Trash2 } from "lucide-react";
+import { Copy, AlertCircle, CheckCircle, Info, Sparkles, FileText, DownloadCloud, Trash2, MessageSquareQuote } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const formSchema = z.object({
-  text: z.string().optional(), // Text is now optional if a file is provided
+  text: z.string().optional(), 
   file: z.custom<FileList>((val) => val instanceof FileList, "অনুগ্রহ করে একটি ফাইল নির্বাচন করুন।").optional(),
 }).refine(data => !!data.text || (data.file && data.file.length > 0), {
   message: "অনুগ্রহ করে টেক্সট লিখুন অথবা একটি ফাইল আপলোড করুন।",
-  path: ["text"], // Can be any path, just to show a general form error
+  path: ["text"], 
 });
 
 
@@ -51,9 +51,12 @@ export function BanglaCorrectorForm() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
   
+  const initialFormState: CorrectTextFormState = { 
+    message: "", error: undefined, result: undefined, originalText: undefined 
+  };
   const [correctionFormState, correctionFormAction] = useActionState<CorrectTextFormState, FormData>(
     handleCorrectText,
-    { message: "", error: undefined, result: undefined, originalText: undefined }
+    initialFormState
   );
 
   const [isSubmittingCorrection, startCorrectionTransition] = useTransition();
@@ -66,13 +69,14 @@ export function BanglaCorrectorForm() {
   });
 
   const [correctedText, setCorrectedText] = useState<string | undefined>(undefined);
-  const [explanation, setExplanation] = useState<string | undefined>(undefined);
+  const [explanationOfCorrections, setExplanationOfCorrections] = useState<string | undefined>(undefined);
   const [qualityScore, setQualityScore] = useState<number | undefined>(undefined);
+  const [explanationOfScore, setExplanationOfScore] = useState<string | undefined>(undefined);
   const [processedSourceText, setProcessedSourceText] = useState<string | undefined>(undefined);
 
 
   useEffect(() => {
-    if (correctionFormState.message) {
+    if (correctionFormState.message && correctionFormState.result) { // only show success if result is also there
       toast({
         title: "সফল",
         description: correctionFormState.message,
@@ -81,8 +85,10 @@ export function BanglaCorrectorForm() {
     }
     if (correctionFormState.result) {
       setCorrectedText(correctionFormState.result.correctedText);
-      setExplanation(correctionFormState.result.explanation);
+      setExplanationOfCorrections(correctionFormState.result.explanationOfCorrections);
       setQualityScore(correctionFormState.result.qualityScore);
+      setExplanationOfScore(correctionFormState.result.explanationOfScore);
+
       if(correctionFormState.originalText) {
         setProcessedSourceText(correctionFormState.originalText);
       }
@@ -91,17 +97,28 @@ export function BanglaCorrectorForm() {
       }
       setSelectedFileName(null);
       correctionForm.reset({ text: "" }); 
+    } else { // if no result, clear previous results
+        setCorrectedText(undefined);
+        setExplanationOfCorrections(undefined);
+        setQualityScore(undefined);
+        setExplanationOfScore(undefined);
+        if (!correctionFormState.error) { // if no error, but no result, it might be initial state or cleared state
+            setProcessedSourceText(undefined);
+        }
     }
+
     if (correctionFormState.error) {
        toast({
         variant: "destructive",
         title: "ত্রুটি",
         description: correctionFormState.error,
       });
+      // Clear results on error
       setCorrectedText(undefined);
-      setExplanation(undefined);
+      setExplanationOfCorrections(undefined);
       setQualityScore(undefined);
-      setProcessedSourceText(undefined);
+      setExplanationOfScore(undefined);
+      setProcessedSourceText(undefined); // Also clear source text indication on error
     }
   }, [correctionFormState, toast, correctionForm]);
 
@@ -151,6 +168,8 @@ export function BanglaCorrectorForm() {
     if (fileInputRef.current?.files && fileInputRef.current.files[0]) {
       formData.append("file", fileInputRef.current.files[0]);
     } else if (!data.text) {
+      // This case should ideally be caught by zod resolver, but as a fallback:
+      correctionForm.setError("root", { message: "অনুগ্রহ করে টেক্সট লিখুন অথবা একটি ফাইল আপলোড করুন।"});
       toast({
         variant: "destructive",
         title: "ইনপুট প্রয়োজন",
@@ -159,9 +178,11 @@ export function BanglaCorrectorForm() {
       return; 
     }
     
+    // Clear previous results before new submission
     setCorrectedText(undefined);
-    setExplanation(undefined);
+    setExplanationOfCorrections(undefined);
     setQualityScore(undefined);
+    setExplanationOfScore(undefined);
     setProcessedSourceText(undefined);
 
     startCorrectionTransition(() => {
@@ -175,6 +196,7 @@ export function BanglaCorrectorForm() {
       setSelectedFileName(event.target.files[0].name);
       correctionForm.setValue("text", ""); 
       correctionForm.clearErrors("text"); 
+      correctionForm.clearErrors("root");
     } else {
       setSelectedFileName(null);
     }
@@ -187,9 +209,19 @@ export function BanglaCorrectorForm() {
     }
     setSelectedFileName(null);
     correctionForm.clearErrors(); 
+    // Also clear results from the state
+    setCorrectedText(undefined);
+    setExplanationOfCorrections(undefined);
+    setQualityScore(undefined);
+    setExplanationOfScore(undefined);
+    setProcessedSourceText(undefined);
+
+    // Reset form action state manually if needed, or rely on new submission to clear it
+    // correctionFormAction(new FormData()); // This might trigger an action, be careful
+    
     toast({ 
         title: "ইনপুট মুছে ফেলা হয়েছে", 
-        description: "টেক্সটবক্স এবং ফাইল ইনপুট পরিষ্কার করা হয়েছে।" 
+        description: "টেক্সটবক্স এবং ফাইল ইনপুট পরিষ্কার করা হয়েছে। ফলাফলও মুছে ফেলা হয়েছে।" 
     });
   };
 
@@ -232,7 +264,7 @@ export function BanglaCorrectorForm() {
                 <Controller
                     name="file"
                     control={correctionForm.control}
-                    render={({ field: { onChange, onBlur, name, ref } }) => (
+                    render={({ field: { onChange, onBlur, name, ref } }) => ( // Removed value from field
                         <Input
                             id="file-upload"
                             type="file"
@@ -266,7 +298,7 @@ export function BanglaCorrectorForm() {
               )}
             </div>
           </CardContent>
-          <CardFooter className="flex flex-col sm:flex-row gap-2 pt-4">
+          <CardFooter className="flex flex-col sm:flex-row justify-end gap-2 pt-4">
             <Button 
                 type="button" 
                 variant="outline" 
@@ -274,14 +306,14 @@ export function BanglaCorrectorForm() {
                 className="w-full sm:w-auto"
             >
                 <Trash2 className="mr-2 h-4 w-4" />
-                ইনপুট মুছুন
+                ইনপুট ও ফলাফল মুছুন
             </Button>
             <SubmitButton className="w-full sm:w-auto" />
           </CardFooter>
         </form>
       </Card>
 
-      { (correctionFormState.result || correctionFormState.error || processedSourceText) && (
+      { (correctedText || explanationOfCorrections || qualityScore !== undefined || explanationOfScore || correctionFormState.error || processedSourceText) && (
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle className="font-headline text-2xl">ফলাফল</CardTitle>
@@ -292,7 +324,7 @@ export function BanglaCorrectorForm() {
             )}
           </CardHeader>
           <CardContent className="space-y-6">
-            {correctionFormState.error && !correctionFormState.result && (
+            {correctionFormState.error && ( // Show error if it exists, regardless of other results
               <div className="text-destructive font-body p-4 border border-destructive bg-destructive/10 rounded-md flex items-start">
                 <AlertCircle className="mr-3 h-5 w-5 flex-shrink-0" />
                 <div>
@@ -335,11 +367,11 @@ export function BanglaCorrectorForm() {
                 />
               </div>
             )}
-            {explanation && (
+            {explanationOfCorrections && (
               <div className="space-y-2">
-                <Label className="font-body text-lg flex items-center"><Info className="mr-2 h-5 w-5 text-accent-foreground" /> ব্যাখ্যা</Label>
+                <Label className="font-body text-lg flex items-center"><Info className="mr-2 h-5 w-5 text-accent-foreground" /> সংশোধনের ব্যাখ্যা</Label>
                 <div className="p-4 rounded-md bg-muted/30 border border-input font-body text-sm whitespace-pre-line">
-                  {explanation.split('\n').map((line, index) => ( 
+                  {explanationOfCorrections.split('\n').map((line, index) => ( 
                     <p key={index} className={cn(line.match(/^\d+\./) ? "mt-1" : "")}>{line.replace(/^"|"$/g, '')}</p>
                   ))}
                 </div>
@@ -350,8 +382,18 @@ export function BanglaCorrectorForm() {
                 <Label className="font-body text-lg">মান স্কোর: <span className="font-bold text-primary">{qualityScore}/100</span></Label>
                 <Progress value={qualityScore} className="w-full h-3 [&>div]:bg-primary" />
                  <p className="text-xs text-muted-foreground font-body">
-                  এই স্কোরটি লেখার বর্তমান মান নির্দেশ করে।
+                  এই স্কোরটি লেখার বর্তমান গুণমান নির্দেশ করে।
                 </p>
+              </div>
+            )}
+             {explanationOfScore && (
+              <div className="space-y-2">
+                <Label className="font-body text-lg flex items-center"><MessageSquareQuote className="mr-2 h-5 w-5 text-accent-foreground" /> স্কোরের ব্যাখ্যা</Label>
+                <div className="p-4 rounded-md bg-muted/30 border border-input font-body text-sm whitespace-pre-line">
+                  {explanationOfScore.split('\n').map((line, index) => ( 
+                    <p key={index} className={cn(line.match(/^\d+\./) ? "mt-1" : "")}>{line.replace(/^"|"$/g, '')}</p>
+                  ))}
+                </div>
               </div>
             )}
           </CardContent>
@@ -360,4 +402,3 @@ export function BanglaCorrectorForm() {
     </div>
   );
 }
-
