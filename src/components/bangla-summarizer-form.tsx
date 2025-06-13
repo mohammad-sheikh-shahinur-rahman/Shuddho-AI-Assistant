@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useActionState, useTransition } from "react";
-import { useFormStatus } from "react-dom";
+// useFormStatus is removed as SubmitButton will take isPending prop
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
@@ -35,12 +35,12 @@ const formSchema = z.object({
 });
 
 
-function SubmitButton({ className }: { className?: string }) {
-  const { pending } = useFormStatus();
+function SubmitButton({ className, isPending }: { className?: string; isPending: boolean }) {
+  // const { pending } = useFormStatus(); // Replaced with isPending prop
   return (
-    <Button type="submit" disabled={pending} className={cn("w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground", className)}>
-      {pending ? "লোড হচ্ছে..." : "সারাংশ করুন"}
-      {!pending && <Sparkles className="ml-2 h-4 w-4" strokeWidth={1.5} />}
+    <Button type="submit" disabled={isPending} className={cn("w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground", className)}>
+      {isPending ? "লোড হচ্ছে..." : "সারাংশ করুন"}
+      {!isPending && <Sparkles className="ml-2 h-4 w-4" strokeWidth={1.5} />}
     </Button>
   );
 }
@@ -57,7 +57,7 @@ export function BanglaSummarizerForm() {
     handleSummarizeText,
     initialFormState
   );
-
+  const [, startSummarizationTransition] = useTransition(); // For wrapping the action call
 
   const summarizationForm = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -163,7 +163,9 @@ export function BanglaSummarizerForm() {
     
     setSummary(undefined);
     setProcessedSourceText(undefined);
-    summarizeFormAction(formData);
+    startSummarizationTransition(() => {
+      summarizeFormAction(formData);
+    });
   });
 
 
@@ -217,7 +219,7 @@ export function BanglaSummarizerForm() {
                 placeholder="এখানে আপনার বাংলা লেখা লিখুন যার সারাংশ করতে চান..."
                 className="min-h-[200px] font-body text-base border-input focus:ring-primary"
                 rows={15}
-                disabled={!!selectedFileName} 
+                disabled={!!selectedFileName || isSubmittingSummarization} 
               />
               {summarizationForm.formState.errors.text && !selectedFileName && ( 
                 <p className="text-sm text-destructive font-body flex items-center">
@@ -249,6 +251,7 @@ export function BanglaSummarizerForm() {
                                 onChange(e.target.files); 
                                 handleFileChange(e); 
                             }}
+                            disabled={isSubmittingSummarization}
                         />
                     )}
                 />
@@ -276,11 +279,12 @@ export function BanglaSummarizerForm() {
                 variant="outline" 
                 onClick={handleClearInputs}
                 className="w-full sm:w-auto"
+                disabled={isSubmittingSummarization}
             >
                 <Trash2 className="mr-2 h-4 w-4" strokeWidth={1.5} />
                 ইনপুট ও ফলাফল মুছুন
             </Button>
-            <SubmitButton className="w-full sm:w-auto" />
+            <SubmitButton className="w-full sm:w-auto" isPending={isSubmittingSummarization} />
           </CardFooter>
         </form>
       </Card>
@@ -348,3 +352,4 @@ export function BanglaSummarizerForm() {
     </div>
   );
 }
+
