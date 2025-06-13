@@ -47,7 +47,7 @@ export default function AboutPage() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-md hover:shadow-lg transition-shadow duration-300">
+        <Card id="developer-profile" className="shadow-md hover:shadow-lg transition-shadow duration-300">
           <CardHeader>
             <CardTitle className="font-headline text-2xl font-semibold mb-2 flex items-center">
               <UserCircle className="h-7 w-7 mr-3 text-primary" strokeWidth={1.5} /> ডেভেলপার পরিচিতি
@@ -131,7 +131,7 @@ export default function AboutPage() {
 
        <footer className="text-center mt-16 py-8 border-t border-border">
         <p className="text-sm text-muted-foreground font-body">
-          &copy; {new Date().getFullYear()} শুদ্ধ AI প্রুফরিডার (মোহাম্মদ শেখ শাহিনুর রহমান কর্তৃক তৈরি)। সর্বস্বত্ব সংরক্ষিত।
+          &copy; {new Date().getFullYear()} শুদ্ধ AI প্রুফরিডার (<Link href="#developer-profile" className="hover:text-primary hover:underline">মোহাম্মদ শেখ শাহিনুর রহমান</Link> কর্তৃক তৈরি)। সর্বস্বত্ব সংরক্ষিত।
         </p>
       </footer>
     </main>
