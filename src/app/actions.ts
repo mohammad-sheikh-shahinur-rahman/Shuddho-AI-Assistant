@@ -18,7 +18,7 @@ export type CorrectTextFormState = {
   };
   error?: string;
   message?: string;
-  originalText?: string; 
+  originalText?: string;
 };
 
 export async function handleCorrectText(
@@ -40,11 +40,12 @@ export async function handleCorrectText(
       }
 
       if (fileInput.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" || fileInput.name.endsWith(".docx")) {
-        const { value } = await mammoth.extractRawText({ arrayBuffer });
+        const nodeBuffer = Buffer.from(arrayBuffer);
+        const { value } = await mammoth.extractRawText({ buffer: nodeBuffer });
         textToCorrect = value;
       } else if (fileInput.type === "application/pdf" || fileInput.name.endsWith(".pdf")) {
         const pdf = (await import("pdf-parse")).default;
-        const data = await pdf(Buffer.from(arrayBuffer));
+        const data = await pdf(Buffer.from(arrayBuffer)); // pdf-parse expects Buffer
         textToCorrect = data.text;
       } else if (fileInput.type === "text/plain" || fileInput.name.endsWith(".txt")) {
         textToCorrect = Buffer.from(arrayBuffer).toString("utf-8");
@@ -81,15 +82,15 @@ export async function handleCorrectText(
         return { error: "টেক্সটের গুণমান স্কোর করা সম্ভব হয়নি। AI থেকে সঠিক উত্তর পাওয়া যায়নি।" };
     }
 
-    return { 
+    return {
       result: {
         correctedText: correctionResult.correctedText,
         explanationOfCorrections: correctionResult.explanationOfCorrections,
         qualityScore: scoringResult.qualityScore,
         explanationOfScore: scoringResult.explanationOfScore,
       },
-      originalText: `"${source}" থেকে প্রাপ্ত লেখা`, 
-      message: `"${source}" থেকে প্রাপ্ত লেখা সফলভাবে সংশোধন ও মূল্যায়ন করা হয়েছে।` 
+      originalText: `"${source}" থেকে প্রাপ্ত লেখা`,
+      message: `"${source}" থেকে প্রাপ্ত লেখা সফলভাবে সংশোধন ও মূল্যায়ন করা হয়েছে।`
     };
   } catch (e) {
     console.error("AI Processing Error (Correction):", e);
@@ -127,11 +128,12 @@ export async function handleSummarizeText(
       }
 
       if (fileInput.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" || fileInput.name.endsWith(".docx")) {
-        const { value } = await mammoth.extractRawText({ arrayBuffer });
+        const nodeBuffer = Buffer.from(arrayBuffer);
+        const { value } = await mammoth.extractRawText({ buffer: nodeBuffer });
         textToSummarize = value;
       } else if (fileInput.type === "application/pdf" || fileInput.name.endsWith(".pdf")) {
         const pdf = (await import("pdf-parse")).default;
-        const data = await pdf(Buffer.from(arrayBuffer));
+        const data = await pdf(Buffer.from(arrayBuffer)); // pdf-parse expects Buffer
         textToSummarize = data.text;
       } else if (fileInput.type === "text/plain" || fileInput.name.endsWith(".txt")) {
         textToSummarize = Buffer.from(arrayBuffer).toString("utf-8");
@@ -203,33 +205,37 @@ export async function sendMessageToLanguageExpert(
 
   // Prepare history for the AI flow
   const historyForAI: {user?: string; model?: string}[] = [];
-  let lastRole: 'user' | 'model' | null = null;
-  let currentUserMessage: string | undefined = undefined;
+  // let lastRole: 'user' | 'model' | null = null; // Not used currently
+  // let currentUserMessageForHistory: string | undefined = undefined; // Renamed for clarity
 
   // Reconstruct history as pairs of user/model messages for the prompt
-   currentMessagesWithUser.filter(msg => msg.role === 'user' || msg.role === 'model').forEach(msg => {
+   currentMessagesWithUser.filter(msg => msg.role === 'user' || msg.role === 'model').forEach((msg, index, arr) => {
     if (msg.role === 'user') {
-      currentUserMessage = msg.content;
-    } else if (msg.role === 'model' && currentUserMessage) {
-      historyForAI.push({ user: currentUserMessage, model: msg.content });
-      currentUserMessage = undefined; // Reset for next pair
-    } else if (msg.role === 'model' && !currentUserMessage) {
-        // This case (model message without a preceding user message in current history segment)
-        // might occur if history starts with a model message, or if there's an unpaired model message.
-        // Depending on the desired logic, you might prepend an empty user message or handle differently.
-        // For now, we'll assume a model message follows a user message or is a standalone initial greeting.
-        // If it's a greeting/initial model message without prior user input, it might be added differently
-        // or assumed by the system prompt. Let's push it if it's the very first.
-        if (historyForAI.length === 0 && currentMessagesWithUser.indexOf(msg) === 0) {
-             historyForAI.push({ model: msg.content });
+      // Look ahead for the next model message if this is not the last message
+      if (index + 1 < arr.length && arr[index+1].role === 'model') {
+         //This is a user message that has a corresponding model response later in the array
+      } else if (index === arr.length -1 ) {
+         // This is the current user message, which doesn't have a model response yet.
+         // It will be passed as the main 'message' to the AI, not as history.
+      }
+    } else if (msg.role === 'model') {
+        // Find the preceding user message for this model message
+        if (index > 0 && arr[index-1].role === 'user') {
+            historyForAI.push({ user: arr[index-1].content, model: msg.content });
+        } else if (index === 0) { // Model message is the first in the list (e.g. initial greeting)
+            // This scenario implies the model initiated or there's no preceding user message in the current filtered list.
+            // Depending on how history is structured, we might push only the model part.
+            // For now, Genkit's history format typically pairs them.
+            // If it's an initial greeting from a system message, it's usually not part of 'history' in this way.
+            // Given our current use, a model message without a preceding user message in `historyForAI` would be unusual.
         }
     }
   });
 
 
   const chatInput: LanguageExpertChatInput = {
-    message: userInput,
-    history: historyForAI.length > 0 ? historyForAI.slice(0, -1) : [], // Send history *before* current user message
+    message: userInput, // The current user's message
+    history: historyForAI, // The reconstructed history of past user/model pairs
   };
 
   try {
