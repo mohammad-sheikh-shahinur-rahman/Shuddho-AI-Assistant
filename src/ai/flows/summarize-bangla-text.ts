@@ -51,8 +51,9 @@ const summarizeBanglaTextFlow = ai.defineFlow(
   },
   async input => {
     const {output} = await prompt(input);
-    if (!output) {
-      throw new Error("AI মডেল থেকে কোনো বিশ্লেষণ পাওয়া যায়নি বা উত্তরটি সঠিক ফরম্যাটে নেই।");
+    // Robust check for the required summary property
+    if (!output || typeof output.summary !== 'string' || output.summary.trim() === "") {
+      throw new Error("AI মডেল থেকে সারাংশ পাওয়া যায়নি বা উত্তরটি সঠিক ফরম্যাটে নেই।");
     }
     return output;
   }

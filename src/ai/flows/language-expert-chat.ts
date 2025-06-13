@@ -55,11 +55,11 @@ const languageExpertChatFlow = ai.defineFlow(
   },
   async (input) => {
     const llmResponse = await prompt(input);
-    const output = llmResponse.output; 
-    if (!output) {
+    const output = llmResponse.output;
+    // Robust check for the response property
+    if (!output || typeof output.response !== 'string' || output.response.trim() === "") {
         return {response: "দুঃখিত, আমি এই মুহূর্তে উত্তর দিতে পারছি না। অনুগ্রহ করে কিছুক্ষণ পর আবার চেষ্টা করুন।"}
     }
     return {response: output.response};
   }
 );
-

@@ -65,8 +65,15 @@ const analyzeTextFlow = ai.defineFlow(
   },
   async input => {
     const {output} = await prompt(input);
-    if (!output) {
-        throw new Error("AI বিশ্লেষণ থেকে কোনো উত্তর পাওয়া যায়নি।");
+    // Robust check for all required properties
+    if (!output ||
+        typeof output.wordCount !== 'number' ||
+        typeof output.characterCount !== 'number' ||
+        typeof output.sentenceCount !== 'number' ||
+        !['positive', 'negative', 'neutral', 'mixed'].includes(output.sentiment as string) || // Check enum values
+        typeof output.sentimentExplanation !== 'string' || output.sentimentExplanation.trim() === ""
+    ) {
+        throw new Error("AI বিশ্লেষণ থেকে সম্পূর্ণ উত্তর পাওয়া যায়নি বা উত্তরটি সঠিক ফরম্যাটে নেই।");
     }
     return output;
   }

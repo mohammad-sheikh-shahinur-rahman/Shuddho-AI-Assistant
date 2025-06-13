@@ -14,8 +14,6 @@ import {z} from 'genkit';
 const langCodeToName = (code: 'bn' | 'en'): string => {
   if (code === 'bn') return 'Bengali';
   if (code === 'en') return 'English';
-  // This case should ideally not be reached if input validation is done properly.
-  // However, as a fallback, return the code itself or handle as an error.
   return code;
 };
 
@@ -25,7 +23,7 @@ const TranslateTextInputSchema = z.object({
   targetLanguage: z.enum(['bn', 'en'], { errorMap: () => ({ message: "Please select a valid target language." }) }).describe('The target language code (bn for Bengali, en for English).'),
 }).refine(data => data.sourceLanguage !== data.targetLanguage, {
   message: "Source and target languages must be different.",
-  path: ["targetLanguage"], // Or apply to a general form error
+  path: ["targetLanguage"],
 });
 export type TranslateTextInput = z.infer<typeof TranslateTextInputSchema>;
 
@@ -40,7 +38,7 @@ export async function translateText(input: TranslateTextInput): Promise<Translat
 
 const prompt = ai.definePrompt({
   name: 'translateTextPrompt',
-  input: {schema: z.object({ // Internal schema for the prompt variables
+  input: {schema: z.object({ 
     text: z.string(),
     sourceLanguageName: z.string(),
     targetLanguageName: z.string(),
@@ -74,10 +72,11 @@ const translateTextFlow = ai.defineFlow(
         sourceLanguageName,
         targetLanguageName,
     });
-    if (!output) {
-        // This case might indicate an issue with the LLM response or prompt execution
-        return { translatedText: "Translation failed: No output from AI model." };
+
+    // Robust check for the required translatedText property
+    if (!output || typeof output.translatedText !== 'string' || output.translatedText.trim() === "") {
+        return { translatedText: "অনুবাদ ব্যর্থ হয়েছে: AI মডেল থেকে কোনো অনুবাদিত টেক্সট পাওয়া যায়নি বা উত্তরটি অসম্পূর্ণ।" };
     }
-    return output; // output is already of type TranslateTextOutputSchema
+    return output;
   }
 );

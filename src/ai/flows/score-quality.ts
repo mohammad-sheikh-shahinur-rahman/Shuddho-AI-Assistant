@@ -44,7 +44,7 @@ You will receive corrected Bangla text and provide a quality score out of 100, a
 
 Corrected Text: {{{correctedText}}}
 
-Respond with the quality score and explanation for the score in the following format:
+Respond with the quality score and explanation for the score in the following JSON format:
 {
   "qualityScore": <score>,
   "explanationOfScore": "<explanation for the score>"
@@ -60,8 +60,9 @@ const scoreQualityFlow = ai.defineFlow(
   },
   async input => {
     const {output} = await prompt(input);
-    if (!output) {
-      throw new Error("AI মডেল থেকে কোনো বিশ্লেষণ পাওয়া যায়নি বা উত্তরটি সঠিক ফরম্যাটে নেই।");
+    // Robust check for required properties
+    if (!output || typeof output.qualityScore !== 'number' || typeof output.explanationOfScore !== 'string') {
+      throw new Error("AI মডেল থেকে গুণমান স্কোর বা ব্যাখ্যা পাওয়া যায়নি বা উত্তরটি সঠিক ফরম্যাটে নেই।");
     }
     return output;
   }
