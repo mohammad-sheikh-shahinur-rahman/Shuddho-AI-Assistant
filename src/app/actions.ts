@@ -26,6 +26,7 @@ export async function handleCorrectText(
   prevState: CorrectTextFormState,
   formData: FormData
 ): Promise<CorrectTextFormState> {
+  const actionName = "handleCorrectText";
   const textInput = formData.get("text") as string | null;
   const fileInput = formData.get("file") as File | null;
 
@@ -36,7 +37,7 @@ export async function handleCorrectText(
     source = fileInput.name;
     try {
       const arrayBuffer = await fileInput.arrayBuffer();
-      console.log(`File (Correction: ${fileInput.name}) ArrayBuffer byteLength: ${arrayBuffer.byteLength}`);
+      console.log(`File (${actionName}: ${fileInput.name}) ArrayBuffer byteLength: ${arrayBuffer.byteLength}`);
       if (arrayBuffer.byteLength === 0) {
         return { error: `ফাইল (${fileInput.name}) খালি অথবা পড়া যাচ্ছে না। অনুগ্রহ করে একটি সঠিক ফাইল আপলোড করুন।` };
       }
@@ -51,9 +52,9 @@ export async function handleCorrectText(
             return { error: `DOCX ফাইল (${fileInput.name}) থেকে কোনো টেক্সট এক্সট্র্যাক্ট করা যায়নি। ফাইলটি পরীক্ষা করুন।` };
           }
         } catch (docxError) {
-          console.error(`DOCX Parsing Error (Correction: ${fileInput.name}):`, docxError);
+          console.error(`DOCX Parsing Error (${actionName}: ${fileInput.name}):`, docxError);
           const errorMessage = docxError instanceof Error ? docxError.message : "অজানা DOCX প্রসেসিং ত্রুটি";
-          return { error: `DOCX ফাইল (${fileInput.name}) প্রসেস করতে সমস্যা হয়েছে: ${errorMessage}। সার্ভার লগ দেখুন।` };
+          return { error: `DOCX ফাইল (${fileInput.name}) প্রসেস করতে সমস্যা হয়েছে: ${errorMessage}। বিস্তারিত জানতে সার্ভার লগ দেখুন।` };
         }
       } else if (fileInput.type === "application/pdf" || fileInput.name.endsWith(".pdf")) {
         const pdf = (await import("pdf-parse")).default;
@@ -69,10 +70,13 @@ export async function handleCorrectText(
         return { error: `ফাইল (${fileInput.name}) থেকে কোনো টেক্সট পাওয়া যায়নি অথবা ফাইলটি খালি।` };
       }
     } catch (e) {
-      console.error(`File Processing Error (Correction: ${fileInput.name}):`, e);
-      const errorStack = e instanceof Error && e.stack ? e.stack : 'No stack trace available.';
-      const errorMessage = e instanceof Error ? e.message : "অজানা ত্রুটি";
-      return { error: `ফাইল (${fileInput.name}) প্রসেস করতে সমস্যা হয়েছে: ${errorMessage} অনুগ্রহ করে আবার চেষ্টা করুন। সার্ভার লগ দেখুন। \nStack: ${errorStack}` };
+      let clientErrorMessage = `ফাইল (${fileInput.name}) প্রসেস করতে সমস্যা হয়েছে। অনুগ্রহ করে সার্ভার লগ দেখুন।`;
+      if (e instanceof Error) {
+        console.error(`File Processing Error (${actionName}: ${fileInput.name}): ${e.message}`, e.stack);
+      } else {
+        console.error(`File Processing Error (${actionName}: ${fileInput.name}):`, e);
+      }
+      return { error: clientErrorMessage };
     }
   }
 
@@ -87,7 +91,7 @@ export async function handleCorrectText(
   try {
     const correctionResult = await correctBanglaText(correctionInput);
     if (!correctionResult || typeof correctionResult.correctedText !== 'string') {
-        console.error("Invalid correctionResult from AI flow in handleCorrectText:", JSON.stringify(correctionResult));
+        console.error(`Invalid correctionResult from AI flow in ${actionName}:`, JSON.stringify(correctionResult));
         return { error: "টেক্সট শুদ্ধ করা সম্ভব হয়নি। AI থেকে একটি ত্রুটিপূর্ণ বা অসম্পূর্ণ উত্তর পাওয়া গেছে (correction)। বিস্তারিত জানতে সার্ভার লগ দেখুন।" };
     }
 
@@ -97,7 +101,7 @@ export async function handleCorrectText(
 
     const scoringResult = await scoreQuality(scoringInput);
      if (!scoringResult || typeof scoringResult.qualityScore !== 'number' || typeof scoringResult.explanationOfScore !== 'string') {
-        console.error("Invalid scoringResult from AI flow in handleCorrectText:", JSON.stringify(scoringResult));
+        console.error(`Invalid scoringResult from AI flow in ${actionName}:`, JSON.stringify(scoringResult));
         return { error: "টেক্সটের গুণমান স্কোর করা সম্ভব হয়নি। AI থেকে একটি ত্রুটিপূর্ণ বা অসম্পূর্ণ উত্তর পাওয়া গেছে (scoring)। বিস্তারিত জানতে সার্ভার লগ দেখুন।" };
     }
 
@@ -112,10 +116,13 @@ export async function handleCorrectText(
       message: `"${source}" থেকে প্রাপ্ত লেখা সফলভাবে সংশোধন ও মূল্যায়ন করা হয়েছে।`
     };
   } catch (e) {
-    console.error(`AI Processing Error (handleCorrectText, source: ${source}):`, e);
-    const errorStack = e instanceof Error && e.stack ? e.stack : 'No stack trace available.';
-    const errorMessage = e instanceof Error ? e.message : "অজানা ত্রুটি";
-    return { error: `AI প্রসেসিং-এ একটি সমস্যা হয়েছে (${source}). অনুগ্রহ করে আবার চেষ্টা করুন বা বিস্তারিত জানতে সার্ভার লগ দেখুন। ত্রুটি: ${errorMessage} \nStack: ${errorStack}` };
+    let clientErrorMessage = `AI প্রসেসিং-এ একটি সমস্যা হয়েছে (${source})। অনুগ্রহ করে সার্ভার লগ দেখুন।`;
+    if (e instanceof Error) {
+        console.error(`AI Processing Error (${actionName}, source: ${source}): ${e.message}`, e.stack);
+    } else {
+        console.error(`AI Processing Error (${actionName}, source: ${source}):`, e);
+    }
+    return { error: clientErrorMessage };
   }
 }
 
@@ -133,6 +140,7 @@ export async function handleSummarizeText(
   prevState: SummarizeTextFormState,
   formData: FormData
 ): Promise<SummarizeTextFormState> {
+  const actionName = "handleSummarizeText";
   const textInput = formData.get("text") as string | null;
   const fileInput = formData.get("file") as File | null;
 
@@ -143,7 +151,7 @@ export async function handleSummarizeText(
     source = fileInput.name;
     try {
       const arrayBuffer = await fileInput.arrayBuffer();
-      console.log(`File (Summarization: ${fileInput.name}) ArrayBuffer byteLength: ${arrayBuffer.byteLength}`);
+      console.log(`File (${actionName}: ${fileInput.name}) ArrayBuffer byteLength: ${arrayBuffer.byteLength}`);
       if (arrayBuffer.byteLength === 0) {
         return { error: `ফাইল (${fileInput.name}) খালি অথবা পড়া যাচ্ছে না। অনুগ্রহ করে একটি সঠিক ফাইল আপলোড করুন।` };
       }
@@ -158,9 +166,9 @@ export async function handleSummarizeText(
             return { error: `DOCX ফাইল (${fileInput.name}) থেকে কোনো টেক্সট এক্সট্র্যাক্ট করা যায়নি। ফাইলটি পরীক্ষা করুন।` };
           }
         } catch (docxError) {
-          console.error(`DOCX Parsing Error (Summarization: ${fileInput.name}):`, docxError);
+          console.error(`DOCX Parsing Error (${actionName}: ${fileInput.name}):`, docxError);
           const errorMessage = docxError instanceof Error ? docxError.message : "অজানা DOCX প্রসেসিং ত্রুটি";
-          return { error: `DOCX ফাইল (${fileInput.name}) প্রসেস করতে সমস্যা হয়েছে: ${errorMessage}। সার্ভার লগ দেখুন।` };
+          return { error: `DOCX ফাইল (${fileInput.name}) প্রসেস করতে সমস্যা হয়েছে: ${errorMessage}। বিস্তারিত জানতে সার্ভার লগ দেখুন।` };
         }
       } else if (fileInput.type === "application/pdf" || fileInput.name.endsWith(".pdf")) {
         const pdf = (await import("pdf-parse")).default;
@@ -175,10 +183,13 @@ export async function handleSummarizeText(
         return { error: `ফাইল (${fileInput.name}) থেকে কোনো টেক্সট পাওয়া যায়নি অথবা ফাইলটি খালি।` };
       }
     } catch (e) {
-      console.error(`File Processing Error (Summarization: ${fileInput.name}):`, e);
-      const errorStack = e instanceof Error && e.stack ? e.stack : 'No stack trace available.';
-      const errorMessage = e instanceof Error ? e.message : "অজানা ত্রুটি";
-      return { error: `ফাইল (${fileInput.name}) প্রসেস করতে সমস্যা হয়েছে: ${errorMessage} অনুগ্রহ করে আবার চেষ্টা করুন। সার্ভার লগ দেখুন। \nStack: ${errorStack}` };
+      let clientErrorMessage = `ফাইল (${fileInput.name}) প্রসেস করতে সমস্যা হয়েছে। অনুগ্রহ করে সার্ভার লগ দেখুন।`;
+      if (e instanceof Error) {
+        console.error(`File Processing Error (${actionName}: ${fileInput.name}): ${e.message}`, e.stack);
+      } else {
+        console.error(`File Processing Error (${actionName}: ${fileInput.name}):`, e);
+      }
+      return { error: clientErrorMessage };
     }
   }
 
@@ -193,7 +204,7 @@ export async function handleSummarizeText(
   try {
     const summarizationResult = await summarizeBanglaText(summarizationInput);
     if (!summarizationResult || !summarizationResult.summary || summarizationResult.summary.trim() === "") {
-        console.error("Invalid summarizationResult from AI flow in handleSummarizeText:", JSON.stringify(summarizationResult));
+        console.error(`Invalid summarizationResult from AI flow in ${actionName}:`, JSON.stringify(summarizationResult));
         return { error: "লেখাটির সারাংশ তৈরি করা সম্ভব হয়নি। AI থেকে একটি ত্রুটিপূর্ণ বা অসম্পূর্ণ উত্তর পাওয়া গেছে। বিস্তারিত জানতে সার্ভার লগ দেখুন।" };
     }
 
@@ -205,10 +216,13 @@ export async function handleSummarizeText(
       message: `"${source}" থেকে প্রাপ্ত লেখা সফলভাবে সারাংশ করা হয়েছে।`,
     };
   } catch (e) {
-    console.error(`AI Processing Error (handleSummarizeText, source: ${source}):`, e);
-    const errorStack = e instanceof Error && e.stack ? e.stack : 'No stack trace available.';
-    const errorMessage = e instanceof Error ? e.message : "অজানা ত্রুটি";
-    return { error: `AI প্রসেসিং-এ একটি সমস্যা হয়েছে (${source}). অনুগ্রহ করে আবার চেষ্টা করুন বা বিস্তারিত জানতে সার্ভার লগ দেখুন। ত্রুটি: ${errorMessage} \nStack: ${errorStack}` };
+    let clientErrorMessage = `AI প্রসেসিং-এ একটি সমস্যা হয়েছে (${source})। অনুগ্রহ করে সার্ভার লগ দেখুন।`;
+    if (e instanceof Error) {
+        console.error(`AI Processing Error (${actionName}, source: ${source}): ${e.message}`, e.stack);
+    } else {
+        console.error(`AI Processing Error (${actionName}, source: ${source}):`, e);
+    }
+    return { error: clientErrorMessage };
   }
 }
 
@@ -227,6 +241,7 @@ export async function sendMessageToLanguageExpert(
   currentState: LanguageExpertChatState,
   formData: FormData
 ): Promise<LanguageExpertChatState> {
+  const actionName = "sendMessageToLanguageExpert";
   const userInput = formData.get("message") as string;
   if (!userInput || userInput.trim() === "") {
     return { ...currentState, error: "অনুগ্রহ করে আপনার প্রশ্ন লিখুন।" };
@@ -261,7 +276,7 @@ export async function sendMessageToLanguageExpert(
   try {
     const aiResponse = await languageExpertChat(chatInput);
     if (!aiResponse || !aiResponse.response || aiResponse.response.trim() === "") {
-      console.error("Invalid aiResponse from languageExpertChat flow in sendMessageToLanguageExpert:", JSON.stringify(aiResponse));
+      console.error(`Invalid aiResponse from languageExpertChat flow in ${actionName}:`, JSON.stringify(aiResponse));
       return {
         ...currentState,
         messages: currentMessagesWithUser,
@@ -280,13 +295,16 @@ export async function sendMessageToLanguageExpert(
       error: undefined,
     };
   } catch (e) {
-    console.error("AI Processing Error (sendMessageToLanguageExpert):", e);
-    const errorStack = e instanceof Error && e.stack ? e.stack : 'No stack trace available.';
-    const errorMessage = e instanceof Error ? e.message : "অজানা ত্রুটি";
+    let clientErrorMessage = "AI চ্যাট প্রসেসিং-এ একটি সমস্যা হয়েছে। অনুগ্রহ করে সার্ভার লগ দেখুন।";
+    if (e instanceof Error) {
+        console.error(`AI Processing Error (${actionName}): ${e.message}`, e.stack);
+    } else {
+        console.error(`AI Processing Error (${actionName}):`, e);
+    }
     return {
       ...currentState,
       messages: currentMessagesWithUser,
-      error: `AI চ্যাট প্রসেসিং-এ একটি সমস্যা হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন বা বিস্তারিত জানতে সার্ভার লগ দেখুন। ত্রুটি: ${errorMessage} \nStack: ${errorStack}`,
+      error: clientErrorMessage,
     };
   }
 }
@@ -306,6 +324,7 @@ export async function handleTranslateText(
   prevState: TranslateTextFormState,
   formData: FormData
 ): Promise<TranslateTextFormState> {
+  const actionName = "handleTranslateText";
   const textInput = formData.get("text") as string | null;
   const sourceLanguage = formData.get("sourceLanguage") as 'bn' | 'en' | null;
   const targetLanguage = formData.get("targetLanguage") as 'bn' | 'en' | null;
@@ -332,7 +351,7 @@ export async function handleTranslateText(
   try {
     const translationResult = await translateText(translationInput);
     if (!translationResult || !translationResult.translatedText || translationResult.translatedText.trim() === "") {
-        console.error("Invalid translationResult from AI flow in handleTranslateText:", JSON.stringify(translationResult));
+        console.error(`Invalid translationResult from AI flow in ${actionName}:`, JSON.stringify(translationResult));
         return { error: "টেক্সট অনুবাদ করা সম্ভব হয়নি। AI থেকে একটি ত্রুটিপূর্ণ বা অসম্পূর্ণ উত্তর পাওয়া গেছে। বিস্তারিত জানতে সার্ভার লগ দেখুন।" };
     }
 
@@ -348,10 +367,13 @@ export async function handleTranslateText(
       targetLang: targetLanguage,
     };
   } catch (e) {
-    console.error("AI Processing Error (handleTranslateText):", e);
-    const errorStack = e instanceof Error && e.stack ? e.stack : 'No stack trace available.';
-    const errorMessage = e instanceof Error ? e.message : "অজানা ত্রুটি";
-    return { error: `AI অনুবাদ প্রসেসিং-এ একটি সমস্যা হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন বা বিস্তারিত জানতে সার্ভার লগ দেখুন। ত্রুটি: ${errorMessage} \nStack: ${errorStack}` };
+    let clientErrorMessage = "AI অনুবাদ প্রসেসিং-এ একটি সমস্যা হয়েছে। অনুগ্রহ করে সার্ভার লগ দেখুন।";
+    if (e instanceof Error) {
+        console.error(`AI Processing Error (${actionName}): ${e.message}`, e.stack);
+    } else {
+        console.error(`AI Processing Error (${actionName}):`, e);
+    }
+    return { error: clientErrorMessage };
   }
 }
 
@@ -367,6 +389,7 @@ export async function handleAnalyzeText(
   prevState: AnalyzeTextFormState,
   formData: FormData
 ): Promise<AnalyzeTextFormState> {
+  const actionName = "handleAnalyzeText";
   const textInput = formData.get("text") as string | null;
   const fileInput = formData.get("file") as File | null;
 
@@ -377,7 +400,7 @@ export async function handleAnalyzeText(
     source = fileInput.name;
     try {
       const arrayBuffer = await fileInput.arrayBuffer();
-      console.log(`File (Analysis: ${fileInput.name}) ArrayBuffer byteLength: ${arrayBuffer.byteLength}`);
+      console.log(`File (${actionName}: ${fileInput.name}) ArrayBuffer byteLength: ${arrayBuffer.byteLength}`);
       if (arrayBuffer.byteLength === 0) {
         return { error: `ফাইল (${fileInput.name}) খালি অথবা পড়া যাচ্ছে না। অনুগ্রহ করে একটি সঠিক ফাইল আপলোড করুন।` };
       }
@@ -392,9 +415,9 @@ export async function handleAnalyzeText(
             return { error: `DOCX ফাইল (${fileInput.name}) থেকে কোনো টেক্সট এক্সট্র্যাক্ট করা যায়নি। ফাইলটি পরীক্ষা করুন।` };
           }
         } catch (docxError) {
-          console.error(`DOCX Parsing Error (Analysis: ${fileInput.name}):`, docxError);
+          console.error(`DOCX Parsing Error (${actionName}: ${fileInput.name}):`, docxError);
           const errorMessage = docxError instanceof Error ? docxError.message : "অজানা DOCX প্রসেসিং ত্রুটি";
-          return { error: `DOCX ফাইল (${fileInput.name}) প্রসেস করতে সমস্যা হয়েছে: ${errorMessage}। সার্ভার লগ দেখুন।` };
+          return { error: `DOCX ফাইল (${fileInput.name}) প্রসেস করতে সমস্যা হয়েছে: ${errorMessage}। বিস্তারিত জানতে সার্ভার লগ দেখুন।` };
         }
       } else if (fileInput.type === "application/pdf" || fileInput.name.endsWith(".pdf")) {
         const pdf = (await import("pdf-parse")).default;
@@ -409,10 +432,13 @@ export async function handleAnalyzeText(
         return { error: `ফাইল (${fileInput.name}) থেকে কোনো টেক্সট পাওয়া যায়নি অথবা ফাইলটি খালি।` };
       }
     } catch (e) {
-      console.error(`File Processing Error (Analysis: ${fileInput.name}):`, e);
-      const errorStack = e instanceof Error && e.stack ? e.stack : 'No stack trace available.';
-      const errorMessage = e instanceof Error ? e.message : "অজানা ত্রুটি";
-      return { error: `ফাইল (${fileInput.name}) প্রসেস করতে সমস্যা হয়েছে: ${errorMessage} অনুগ্রহ করে আবার চেষ্টা করুন। সার্ভার লগ দেখুন। \nStack: ${errorStack}` };
+      let clientErrorMessage = `ফাইল (${fileInput.name}) প্রসেস করতে সমস্যা হয়েছে। অনুগ্রহ করে সার্ভার লগ দেখুন।`;
+      if (e instanceof Error) {
+        console.error(`File Processing Error (${actionName}: ${fileInput.name}): ${e.message}`, e.stack);
+      } else {
+        console.error(`File Processing Error (${actionName}: ${fileInput.name}):`, e);
+      }
+      return { error: clientErrorMessage };
     }
   }
 
@@ -433,7 +459,7 @@ export async function handleAnalyzeText(
         !['positive', 'negative', 'neutral', 'mixed'].includes(analysisResult.sentiment) ||
         typeof analysisResult.sentimentExplanation !== 'string' || analysisResult.sentimentExplanation.trim() === ""
     ) {
-        console.error("Invalid analysisResult from AI flow in handleAnalyzeText:", JSON.stringify(analysisResult));
+        console.error(`Invalid analysisResult from AI flow in ${actionName}:`, JSON.stringify(analysisResult));
         return { error: "টেক্সট বিশ্লেষণ করা সম্ভব হয়নি। AI থেকে একটি ত্রুটিপূর্ণ বা অসম্পূর্ণ উত্তর পাওয়া গেছে। বিস্তারিত জানতে সার্ভার লগ দেখুন।" };
     }
 
@@ -443,10 +469,13 @@ export async function handleAnalyzeText(
       message: `"${source}" থেকে প্রাপ্ত লেখা সফলভাবে বিশ্লেষণ করা হয়েছে।`,
     };
   } catch (e) {
-    console.error(`AI Processing Error (handleAnalyzeText, source: ${source}):`, e);
-    const errorStack = e instanceof Error && e.stack ? e.stack : 'No stack trace available.';
-    const errorMessage = e instanceof Error ? e.message : "অজানা ত্রুটি";
-    return { error: `AI প্রসেসিং-এ একটি সমস্যা হয়েছে (${source}). অনুগ্রহ করে আবার চেষ্টা করুন বা বিস্তারিত জানতে সার্ভার লগ দেখুন। ত্রুটি: ${errorMessage} \nStack: ${errorStack}` };
+    let clientErrorMessage = `AI প্রসেসিং-এ একটি সমস্যা হয়েছে (${source})। অনুগ্রহ করে সার্ভার লগ দেখুন।`;
+    if (e instanceof Error) {
+        console.error(`AI Processing Error (${actionName}, source: ${source}): ${e.message}`, e.stack);
+    } else {
+        console.error(`AI Processing Error (${actionName}, source: ${source}):`, e);
+    }
+    return { error: clientErrorMessage };
   }
 }
 
