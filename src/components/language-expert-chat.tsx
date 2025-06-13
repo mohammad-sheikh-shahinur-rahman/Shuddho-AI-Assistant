@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,7 @@ export function LanguageExpertChat() {
   const [input, setInput] = useState("");
   const formRef = useRef<HTMLFormElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const prevIsPending = useRef(isPending);
 
 
   useEffect(() => {
@@ -41,14 +42,13 @@ export function LanguageExpertChat() {
     }
   }, [state.messages]);
 
-  const handleFormSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!input.trim() && !isPending) return;
-    
-    const formData = new FormData(event.currentTarget);
-    formAction(formData);
-    setInput(""); // Clear input after sending
-  };
+  useEffect(() => {
+    // Clear input if the action was previously pending, is no longer pending, and there was no error.
+    if (prevIsPending.current && !isPending && !state.error) {
+      setInput("");
+    }
+    prevIsPending.current = isPending;
+  }, [isPending, state.error]);
   
   const displayedMessages = state.messages.filter(msg => msg.role !== 'system' || msg.id === 'initial-greeting');
 
@@ -85,14 +85,26 @@ export function LanguageExpertChat() {
             {state.error}
           </div>
         )}
-         <form ref={formRef} onSubmit={handleFormSubmit} className="flex items-center gap-2 pt-2">
+         <form 
+            ref={formRef} 
+            action={formAction} // Use action prop here
+            // Add onSubmit for client-side validation if input is empty before submitting
+            onSubmit={(e) => {
+                if (!input.trim() && !isPending) {
+                    e.preventDefault(); // Prevent form submission if input is empty
+                }
+                // When action prop is used, React handles the submission process
+                // and calling formAction within a transition.
+            }}
+            className="flex items-center gap-2 pt-2"
+          >
             <Input
                 name="message"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="ভাষাবিদকে কিছু জিজ্ঞাসা করুন..."
                 className="flex-grow font-body text-base focus:ring-primary"
-                disabled={isPending}
+                disabled={isPending} // isPending from useActionState can also be used here
                 autoComplete="off"
             />
             <SubmitButton />
@@ -106,3 +118,4 @@ export function LanguageExpertChat() {
     </Card>
   );
 }
+
