@@ -62,6 +62,9 @@ export async function handleCorrectText(
   }
 
   if (!textToCorrect || textToCorrect.trim() === "") {
+    if (fileInput && fileInput.size > 0) {
+        return { error: `ফাইল (${fileInput.name}) থেকে কোনো টেক্সট পাওয়া যায়নি অথবা ফাইলটি খালি।` };
+    }
     return { error: "অনুগ্রহ করে টেক্সটবক্সে কিছু লিখুন অথবা একটি (.docx, .pdf, .txt) ফাইল আপলোড করুন।" };
   }
 
@@ -71,8 +74,9 @@ export async function handleCorrectText(
 
   try {
     const correctionResult = await correctBanglaText(correctionInput);
-    if (!correctionResult || !correctionResult.correctedText) {
-        return { error: "টেক্সট শুদ্ধ করা সম্ভব হয়নি। AI থেকে সঠিক উত্তর পাওয়া যায়নি।" };
+    if (!correctionResult || typeof correctionResult.correctedText !== 'string') {
+        console.error("Invalid correctionResult from AI flow:", JSON.stringify(correctionResult));
+        return { error: "টেক্সট শুদ্ধ করা সম্ভব হয়নি। AI থেকে একটি ত্রুটিপূর্ণ বা অসম্পূর্ণ উত্তর পাওয়া গেছে (correction)।" };
     }
 
     const scoringInput: ScoreQualityInput = {
@@ -80,8 +84,9 @@ export async function handleCorrectText(
     };
 
     const scoringResult = await scoreQuality(scoringInput);
-     if (!scoringResult) {
-        return { error: "টেক্সটের গুণমান স্কোর করা সম্ভব হয়নি। AI থেকে সঠিক উত্তর পাওয়া যায়নি।" };
+     if (!scoringResult || typeof scoringResult.qualityScore !== 'number' || typeof scoringResult.explanationOfScore !== 'string') {
+        console.error("Invalid scoringResult from AI flow:", JSON.stringify(scoringResult));
+        return { error: "টেক্সটের গুণমান স্কোর করা সম্ভব হয়নি। AI থেকে একটি ত্রুটিপূর্ণ বা অসম্পূর্ণ উত্তর পাওয়া গেছে (scoring)।" };
     }
 
     return {
@@ -151,6 +156,9 @@ export async function handleSummarizeText(
   }
 
   if (!textToSummarize || textToSummarize.trim() === "") {
+    if (fileInput && fileInput.size > 0) {
+        return { error: `ফাইল (${fileInput.name}) থেকে কোনো টেক্সট পাওয়া যায়নি অথবা ফাইলটি খালি।` };
+    }
     return { error: "অনুগ্রহ করে টেক্সটবক্সে কিছু লিখুন অথবা একটি (.docx, .pdf, .txt) ফাইল আপলোড করুন।" };
   }
 
@@ -160,8 +168,9 @@ export async function handleSummarizeText(
 
   try {
     const summarizationResult = await summarizeBanglaText(summarizationInput);
-    if (!summarizationResult || !summarizationResult.summary) {
-        return { error: "লেখাটির সারাংশ তৈরি করা সম্ভব হয়নি। AI থেকে সঠিক উত্তর পাওয়া যায়নি।" };
+    if (!summarizationResult || !summarizationResult.summary || summarizationResult.summary.trim() === "") {
+        console.error("Invalid summarizationResult from AI flow:", JSON.stringify(summarizationResult));
+        return { error: "লেখাটির সারাংশ তৈরি করা সম্ভব হয়নি। AI থেকে একটি ত্রুটিপূর্ণ বা অসম্পূর্ণ উত্তর পাওয়া গেছে।" };
     }
 
     return {
@@ -209,11 +218,8 @@ export async function sendMessageToLanguageExpert(
 
    currentMessagesWithUser.filter(msg => msg.role === 'user' || msg.role === 'model').forEach((msg, index, arr) => {
     if (msg.role === 'user') {
-      if (index + 1 < arr.length && arr[index+1].role === 'model') {
-         // This is a user message that has a corresponding model response later in the array
-      } else if (index === arr.length -1 ) {
-         // This is the current user message, which doesn't have a model response yet.
-      }
+      // User messages are added to history only if they have a subsequent model response
+      // The current user message (last in array if it's a user message) is handled by `chatInput.message`
     } else if (msg.role === 'model') {
         if (index > 0 && arr[index-1].role === 'user') {
             historyForAI.push({ user: arr[index-1].content, model: msg.content });
@@ -229,11 +235,12 @@ export async function sendMessageToLanguageExpert(
 
   try {
     const aiResponse = await languageExpertChat(chatInput);
-    if (!aiResponse || !aiResponse.response) {
+    if (!aiResponse || !aiResponse.response || aiResponse.response.trim() === "") {
+      console.error("Invalid aiResponse from languageExpertChat flow:", JSON.stringify(aiResponse));
       return {
         ...currentState,
         messages: currentMessagesWithUser,
-        error: "AI থেকে উত্তর পাওয়া যায়নি। অনুগ্রহ করে আবার চেষ্টা করুন।",
+        error: "AI থেকে উত্তর পাওয়া যায়নি বা উত্তরটি অসম্পূর্ণ। অনুগ্রহ করে আবার চেষ্টা করুন।",
       };
     }
 
@@ -298,8 +305,9 @@ export async function handleTranslateText(
 
   try {
     const translationResult = await translateText(translationInput);
-    if (!translationResult || !translationResult.translatedText) {
-        return { error: "টেক্সট অনুবাদ করা সম্ভব হয়নি। AI থেকে সঠিক উত্তর পাওয়া যায়নি বা উত্তরে সমস্যা রয়েছে।" };
+    if (!translationResult || !translationResult.translatedText || translationResult.translatedText.trim() === "") {
+        console.error("Invalid translationResult from AI flow:", JSON.stringify(translationResult));
+        return { error: "টেক্সট অনুবাদ করা সম্ভব হয়নি। AI থেকে একটি ত্রুটিপূর্ণ বা অসম্পূর্ণ উত্তর পাওয়া গেছে।" };
     }
 
     const langToName = (lang: 'bn' | 'en') => lang === 'bn' ? 'বাংলা' : 'ইংরেজি';
@@ -325,7 +333,7 @@ export type AnalyzeTextFormState = {
   result?: AnalyzeTextOutput;
   error?: string;
   message?: string;
-  originalTextSource?: string; // To show what was analyzed (e.g., "File: mydoc.txt" or "Textbox input")
+  originalTextSource?: string; 
 };
 
 export async function handleAnalyzeText(
@@ -368,6 +376,9 @@ export async function handleAnalyzeText(
   }
 
   if (!textToAnalyze || textToAnalyze.trim() === "") {
+     if (fileInput && fileInput.size > 0) {
+        return { error: `ফাইল (${fileInput.name}) থেকে কোনো টেক্সট পাওয়া যায়নি অথবা ফাইলটি খালি।` };
+    }
     return { error: "অনুগ্রহ করে টেক্সটবক্সে কিছু লিখুন অথবা একটি (.docx, .pdf, .txt) ফাইল আপলোড করুন।" };
   }
 
@@ -377,8 +388,15 @@ export async function handleAnalyzeText(
 
   try {
     const analysisResult = await analyzeText(analysisInput);
-    if (!analysisResult) {
-        return { error: "টেক্সট বিশ্লেষণ করা সম্ভব হয়নি। AI থেকে সঠিক উত্তর পাওয়া যায়নি।" };
+    if (!analysisResult || 
+        typeof analysisResult.wordCount !== 'number' ||
+        typeof analysisResult.characterCount !== 'number' ||
+        typeof analysisResult.sentenceCount !== 'number' ||
+        !['positive', 'negative', 'neutral', 'mixed'].includes(analysisResult.sentiment) ||
+        typeof analysisResult.sentimentExplanation !== 'string' || analysisResult.sentimentExplanation.trim() === ""
+    ) {
+        console.error("Invalid analysisResult from AI flow:", JSON.stringify(analysisResult));
+        return { error: "টেক্সট বিশ্লেষণ করা সম্ভব হয়নি। AI থেকে একটি ত্রুটিপূর্ণ বা অসম্পূর্ণ উত্তর পাওয়া গেছে।" };
     }
 
     return {
