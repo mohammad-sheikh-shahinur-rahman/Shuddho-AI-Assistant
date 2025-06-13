@@ -8,13 +8,13 @@ import { summarizeBanglaText, type SummarizeBanglaTextInput } from "@/ai/flows/s
 import { languageExpertChat, type LanguageExpertChatInput, type LanguageExpertChatOutput } from "@/ai/flows/language-expert-chat";
 import { translateText, type TranslateTextInput } from "@/ai/flows/translate-text-flow";
 import { analyzeText, type AnalyzeTextInput, type AnalyzeTextOutput } from "@/ai/flows/analyze-text-flow";
-import mammoth from "mammoth";
+// import mammoth from "mammoth"; // Removed static import
 
 
 export type CorrectTextFormState = {
   result?: {
     correctedText: string;
-    explanationOfCorrections?: string; 
+    explanationOfCorrections?: string;
     qualityScore?: number;
     explanationOfScore?: string;
   };
@@ -42,12 +42,13 @@ export async function handleCorrectText(
       }
 
       if (fileInput.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" || fileInput.name.endsWith(".docx")) {
+        const mammoth = (await import("mammoth")).default;
         const nodeBuffer = Buffer.from(arrayBuffer);
         const { value } = await mammoth.extractRawText({ buffer: nodeBuffer });
         textToCorrect = value;
       } else if (fileInput.type === "application/pdf" || fileInput.name.endsWith(".pdf")) {
         const pdf = (await import("pdf-parse")).default;
-        const data = await pdf(Buffer.from(arrayBuffer)); 
+        const data = await pdf(Buffer.from(arrayBuffer));
         textToCorrect = data.text;
       } else if (fileInput.type === "text/plain" || fileInput.name.endsWith(".txt")) {
         textToCorrect = Buffer.from(arrayBuffer).toString("utf-8");
@@ -130,12 +131,13 @@ export async function handleSummarizeText(
       }
 
       if (fileInput.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" || fileInput.name.endsWith(".docx")) {
+        const mammoth = (await import("mammoth")).default;
         const nodeBuffer = Buffer.from(arrayBuffer);
         const { value } = await mammoth.extractRawText({ buffer: nodeBuffer });
         textToSummarize = value;
       } else if (fileInput.type === "application/pdf" || fileInput.name.endsWith(".pdf")) {
         const pdf = (await import("pdf-parse")).default;
-        const data = await pdf(Buffer.from(arrayBuffer)); 
+        const data = await pdf(Buffer.from(arrayBuffer));
         textToSummarize = data.text;
       } else if (fileInput.type === "text/plain" || fileInput.name.endsWith(".txt")) {
         textToSummarize = Buffer.from(arrayBuffer).toString("utf-8");
@@ -222,8 +224,8 @@ export async function sendMessageToLanguageExpert(
 
 
   const chatInput: LanguageExpertChatInput = {
-    message: userInput, 
-    history: historyForAI, 
+    message: userInput,
+    history: historyForAI,
   };
 
   try {
@@ -231,7 +233,7 @@ export async function sendMessageToLanguageExpert(
     if (!aiResponse || !aiResponse.response) {
       return {
         ...currentState,
-        messages: currentMessagesWithUser, 
+        messages: currentMessagesWithUser,
         error: "AI থেকে উত্তর পাওয়া যায়নি। অনুগ্রহ করে আবার চেষ্টা করুন।",
       };
     }
@@ -251,7 +253,7 @@ export async function sendMessageToLanguageExpert(
     const errorMessage = e instanceof Error ? e.message : "অজানা ত্রুটি";
     return {
       ...currentState,
-      messages: currentMessagesWithUser, 
+      messages: currentMessagesWithUser,
       error: `AI চ্যাট প্রসেসিং-এ একটি সমস্যা হয়েছে: ${errorMessage}`,
     };
   }
@@ -263,7 +265,7 @@ export type TranslateTextFormState = {
   };
   error?: string;
   message?: string;
-  originalTextSnippet?: string; 
+  originalTextSnippet?: string;
   sourceLang?: 'bn' | 'en';
   targetLang?: 'bn' | 'en';
 };
@@ -346,6 +348,7 @@ export async function handleAnalyzeText(
       }
 
       if (fileInput.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" || fileInput.name.endsWith(".docx")) {
+        const mammoth = (await import("mammoth")).default;
         const nodeBuffer = Buffer.from(arrayBuffer);
         const { value } = await mammoth.extractRawText({ buffer: nodeBuffer });
         textToAnalyze = value;
