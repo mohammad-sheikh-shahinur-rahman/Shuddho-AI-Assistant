@@ -276,7 +276,7 @@ export function BanglaCorrectorForm() {
         <CardHeader>
           <CardTitle className="font-headline text-2xl">আপনার লেখা ইনপুট করুন</CardTitle>
           <CardDescription className="font-body">
-            নিচের বাক্সে আপনার বাংলা লেখা টাইপ করুন অথবা একটি DOCX, PDF, বা TXT ফাইল আপলোড করুন। তারপর একটি টোন নির্বাচন করুন।
+            আপনার বাংলা লেখা, বইয়ের পাণ্ডুলিপি এখানে টাইপ করুন অথবা একটি DOCX, PDF, বা TXT ফাইল আপলোড করুন। দীর্ঘ লেখার জন্য TXT ফাইল ব্যবহার করা সুবিধাজনক। তারপর একটি টোন নির্বাচন করুন।
           </CardDescription>
         </CardHeader>
         <form onSubmit={correctionForm.handleSubmit(handleFormSubmit)} className="space-y-6">
@@ -288,7 +288,7 @@ export function BanglaCorrectorForm() {
                 {...correctionForm.register("text")}
                 placeholder="এখানে আপনার বাংলা লেখা লিখুন..."
                 className="min-h-[150px] font-body text-base border-input focus:ring-primary"
-                rows={6}
+                rows={10}
                 disabled={!!selectedFileName} 
               />
               {correctionForm.formState.errors.text && !selectedFileName && ( 
@@ -435,14 +435,14 @@ export function BanglaCorrectorForm() {
                   value={correctedText}
                   readOnly
                   className="min-h-[150px] font-body text-base bg-muted/30 border-input"
-                  rows={6}
+                  rows={10}
                 />
               </div>
             )}
             {explanation && (
               <div className="space-y-2">
                 <Label className="font-body text-lg flex items-center"><Info className="mr-2 h-5 w-5 text-accent-foreground" /> ব্যাখ্যা</Label>
-                <div className="p-4 rounded-md bg-muted/30 border border-input font-body text-sm">
+                <div className="p-4 rounded-md bg-muted/30 border border-input font-body text-sm whitespace-pre-line">
                   {explanation.split('\\n').map((line, index) => ( 
                     <p key={index} className={cn(line.match(/^\\d+\\./) ? "mt-1" : "")}>{line.replace(/^"|"$/g, '')}</p>
                   ))}
@@ -560,7 +560,7 @@ export function BanglaCorrectorForm() {
                   value={toneAdjustedText}
                   readOnly
                   className="min-h-[150px] font-body text-base bg-muted/30 border-input"
-                  rows={6}
+                  rows={10}
                 />
               </div>
               <Button variant="outline" onClick={() => {
@@ -576,4 +576,3 @@ export function BanglaCorrectorForm() {
     </div>
   );
 }
-
