@@ -151,7 +151,6 @@ export function BanglaCorrectorForm() {
     if (fileInputRef.current?.files && fileInputRef.current.files[0]) {
       formData.append("file", fileInputRef.current.files[0]);
     } else if (!data.text) {
-      // This check is theoretically redundant due to zod refine, but good for explicit safety
       toast({
         variant: "destructive",
         title: "ইনপুট প্রয়োজন",
@@ -260,7 +259,7 @@ export function BanglaCorrectorForm() {
                   <AlertCircle className="mr-1 h-4 w-4" /> {correctionForm.formState.errors.file.message}
                 </p>
               )}
-               {correctionForm.formState.errors.root && ( // For the refine error
+               {correctionForm.formState.errors.root && ( 
                 <p className="text-sm text-destructive font-body flex items-center mt-2">
                   <AlertCircle className="mr-1 h-4 w-4" /> {correctionForm.formState.errors.root.message}
                 </p>
@@ -277,7 +276,7 @@ export function BanglaCorrectorForm() {
                 <Trash2 className="mr-2 h-4 w-4" />
                 ইনপুট মুছুন
             </Button>
-            <SubmitButton />
+            <SubmitButton className="w-full sm:w-auto" />
           </CardFooter>
         </form>
       </Card>
@@ -304,14 +303,14 @@ export function BanglaCorrectorForm() {
             )}
             {correctedText && (
               <div className="space-y-2">
-                <div className="flex justify-between items-center">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                   <Label htmlFor="correctedText" className="font-body text-lg">সংশোধিত লেখা</Label>
-                  <div className="flex space-x-2">
+                  <div className="flex flex-col sm:flex-row sm:space-x-2 gap-2 w-full sm:w-auto">
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => handleCopyToClipboard(correctedText, "সংশোধিত লেখা")}
-                      className="text-accent-foreground hover:bg-accent/80"
+                      className="text-accent-foreground hover:bg-accent/80 w-full sm:w-auto"
                     >
                       <Copy className="mr-2 h-4 w-4" />
                       কপি করুন
@@ -320,6 +319,7 @@ export function BanglaCorrectorForm() {
                         variant="outline"
                         size="sm"
                         onClick={() => handleDownloadText(correctedText, "সংশোধিত_লেখা")}
+                        className="w-full sm:w-auto"
                     >
                         <DownloadCloud className="mr-2 h-4 w-4" />
                         ডাউনলোড
@@ -339,8 +339,8 @@ export function BanglaCorrectorForm() {
               <div className="space-y-2">
                 <Label className="font-body text-lg flex items-center"><Info className="mr-2 h-5 w-5 text-accent-foreground" /> ব্যাখ্যা</Label>
                 <div className="p-4 rounded-md bg-muted/30 border border-input font-body text-sm whitespace-pre-line">
-                  {explanation.split('\\n').map((line, index) => ( 
-                    <p key={index} className={cn(line.match(/^\\d+\\./) ? "mt-1" : "")}>{line.replace(/^"|"$/g, '')}</p>
+                  {explanation.split('\n').map((line, index) => ( 
+                    <p key={index} className={cn(line.match(/^\d+\./) ? "mt-1" : "")}>{line.replace(/^"|"$/g, '')}</p>
                   ))}
                 </div>
               </div>
@@ -360,3 +360,4 @@ export function BanglaCorrectorForm() {
     </div>
   );
 }
+
