@@ -176,7 +176,7 @@ export function BanglaSummarizerForm() {
     if (event.target.files && event.target.files[0]) {
       const file = event.target.files[0];
       setSelectedFileName(file.name);
-      setFileReadingProgress(0); // Initialize progress
+      setFileReadingProgress(1); // Initialize progress to 1 for immediate visibility
 
       const reader = new FileReader();
       reader.onprogress = (e) => {
@@ -292,7 +292,7 @@ export function BanglaSummarizerForm() {
               {selectedFileName && fileReadingProgress !== null && (
                 <div className="mt-2 space-y-1">
                   <Label htmlFor="file-read-progress-summarizer" className="text-sm font-body text-muted-foreground">ফাইল লোড হচ্ছে: {selectedFileName}</Label>
-                  <Progress id="file-read-progress-summarizer" value={fileReadingProgress} className="w-full h-2 [&>div]:bg-primary" />
+                  <Progress id="file-read-progress-summarizer" value={fileReadingProgress} className="w-full h-3 [&>div]:bg-primary" />
                 </div>
               )}
               {selectedFileName && fileReadingProgress === null && !isSubmittingSummarization && (
