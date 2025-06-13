@@ -13,18 +13,18 @@ let ai: ReturnType<typeof genkit>;
 try {
   if (process.env.NODE_ENV === 'production') {
     // In production, initialize Genkit normally
-    console.log('Initializing Genkit AI for production...');
+    console.log('Initializing Genkit AI for production with gemini-pro...');
     ai = genkit({
       plugins: [googleAI()],
-      model: 'googleai/gemini-1.5-flash-latest',
+      model: 'googleai/gemini-pro', // Changed model
     });
   } else {
     // In development, ensure the Genkit instance is created only once
     if (!global.__genkit_ai_instance) {
-      console.log('Initializing Genkit AI for development...');
+      console.log('Initializing Genkit AI for development with gemini-pro...');
       global.__genkit_ai_instance = genkit({
         plugins: [googleAI()],
-        model: 'googleai/gemini-1.5-flash-latest',
+        model: 'googleai/gemini-pro', // Changed model
       });
     }
     ai = global.__genkit_ai_instance;
@@ -36,8 +36,9 @@ try {
   
   console.error(detailedError, e); // Log the detailed message and the original error object
 
-  // Throw a new error with the detailed message. This might give Next.js more specific error text to display.
-  throw new Error(detailedError); 
+  // Re-throw the original error 'e' as it might contain more specific details
+  // that Next.js can use for its error overlay.
+  throw e; 
 }
 
 export { ai }; // Export the singleton instance
