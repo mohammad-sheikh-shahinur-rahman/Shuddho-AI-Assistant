@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, Controller } from "react-hook-form";
@@ -21,7 +21,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input"; // Keep, might be used in future
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -33,15 +33,17 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { Copy, Briefcase, Smile, Feather, AlertCircle, CheckCircle, Info, Sparkles, Palette } from "lucide-react";
+import { Copy, Briefcase, Smile, Feather, AlertCircle, CheckCircle, Info, Sparkles, Palette, UploadCloud, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const formSchema = z.object({
-  text: z.string().min(1, { message: "অনুগ্রহ করে কিছু টেক্সট লিখুন।" }),
+  text: z.string().optional(), // Text is now optional if a file is provided
   tone: z.enum(["Formal", "Friendly", "Poetic"], {
     required_error: "অনুগ্রহ করে একটি টোন নির্বাচন করুন।",
   }),
+  file: z.custom<FileList>((val) => val instanceof FileList, "অনুগ্রহ করে একটি ফাইল নির্বাচন করুন।").optional(),
 });
+
 
 const adjustToneFormSchema = z.object({
   newTone: z.enum(["Formal", "Friendly", "Poetic"], {
@@ -84,10 +86,12 @@ function AdjustToneSubmitButton() {
 
 export function BanglaCorrectorForm() {
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
   
   const [correctionFormState, correctionFormAction] = useFormState<CorrectTextFormState, FormData>(
     handleCorrectText,
-    { message: "", error: undefined, result: undefined }
+    { message: "", error: undefined, result: undefined, originalText: undefined }
   );
 
   const [adjustToneFormState, adjustToneFormAction] = useFormState<AdjustToneFormState, FormData>(
@@ -110,20 +114,38 @@ export function BanglaCorrectorForm() {
     },
   });
 
-  const [originalInputText, setOriginalInputText] = useState<string>("");
   const [correctedText, setCorrectedText] = useState<string | undefined>(undefined);
   const [explanation, setExplanation] = useState<string | undefined>(undefined);
   const [qualityScore, setQualityScore] = useState<number | undefined>(undefined);
   const [toneAdjustedText, setToneAdjustedText] = useState<string | undefined>(undefined);
+  const [processedSourceText, setProcessedSourceText] = useState<string | undefined>(undefined);
+
 
   useEffect(() => {
+    if (correctionFormState.message) {
+      toast({
+        title: "সফল",
+        description: correctionFormState.message,
+        action: <CheckCircle className="text-green-500" />,
+      });
+    }
     if (correctionFormState.result) {
       setCorrectedText(correctionFormState.result.correctedText);
       setExplanation(correctionFormState.result.explanation);
       setQualityScore(correctionFormState.result.qualityScore);
-      // Do not reset the form here if we want to allow tone adjustment of corrected text
-      // correctionForm.reset({ text: correctionFormState.result.correctedText, tone: correctionForm.getValues("tone")});
-      setToneAdjustedText(undefined); // Clear previous tone adjusted text
+      setToneAdjustedText(undefined); 
+      if(correctionFormState.originalText) {
+        setProcessedSourceText(correctionFormState.originalText);
+      }
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+      setSelectedFileName(null);
+      // Optionally clear textarea if file was processed
+      // correctionForm.reset({ text: "", tone: correctionForm.getValues("tone") });
+
+
     }
     if (correctionFormState.error) {
        toast({
@@ -135,8 +157,9 @@ export function BanglaCorrectorForm() {
       setExplanation(undefined);
       setQualityScore(undefined);
       setToneAdjustedText(undefined);
+      setProcessedSourceText(undefined);
     }
-  }, [correctionFormState, toast]);
+  }, [correctionFormState, toast, correctionForm]);
 
   useEffect(() => {
     if (adjustToneFormState.result) {
@@ -169,11 +192,37 @@ export function BanglaCorrectorForm() {
   };
   
   const handleFormSubmit = (data: z.infer<typeof formSchema>) => {
-    setOriginalInputText(data.text); // Save original input
     const formData = new FormData();
-    formData.append("text", data.text);
+    if (data.text) {
+      formData.append("text", data.text);
+    }
     formData.append("tone", data.tone);
+    
+    if (fileInputRef.current?.files && fileInputRef.current.files[0]) {
+      formData.append("file", fileInputRef.current.files[0]);
+    } else if (!data.text) {
+      correctionForm.setError("text", { type: "manual", message: "অনুগ্রহ করে টেক্সট লিখুন অথবা একটি ফাইল আপলোড করুন।" });
+      return;
+    }
+    
+    // Clear previous results before new submission
+    setCorrectedText(undefined);
+    setExplanation(undefined);
+    setQualityScore(undefined);
+    setToneAdjustedText(undefined);
+    setProcessedSourceText(undefined);
+
     correctionFormAction(formData);
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files[0]) {
+      setSelectedFileName(event.target.files[0].name);
+      // Optionally clear textarea when a file is selected
+      // correctionForm.setValue("text", ""); 
+    } else {
+      setSelectedFileName(null);
+    }
   };
 
 
@@ -183,13 +232,13 @@ export function BanglaCorrectorForm() {
         <CardHeader>
           <CardTitle className="font-headline text-2xl">আপনার লেখা ইনপুট করুন</CardTitle>
           <CardDescription className="font-body">
-            নিচের বাক্সে আপনার বাংলা লেখা লিখুন এবং একটি টোন নির্বাচন করুন।
+            নিচের বাক্সে আপনার বাংলা লেখা টাইপ করুন অথবা একটি DOCX, PDF, বা TXT ফাইল আপলোড করুন। তারপর একটি টোন নির্বাচন করুন।
           </CardDescription>
         </CardHeader>
         <form onSubmit={correctionForm.handleSubmit(handleFormSubmit)} className="space-y-6">
            <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="text" className="font-body">আপনার লেখা</Label>
+              <Label htmlFor="text" className="font-body">আপনার লেখা (যদি ফাইল আপলোড না করেন)</Label>
               <Textarea
                 id="text"
                 {...correctionForm.register("text")}
@@ -203,6 +252,37 @@ export function BanglaCorrectorForm() {
                 </p>
               )}
             </div>
+
+            <div className="space-y-1">
+              <p className="text-center font-body text-sm text-muted-foreground my-2">অথবা</p>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="file-upload" className="font-body">ফাইল আপলোড করুন (.docx, .pdf, .txt)</Label>
+              <div className="flex items-center space-x-2">
+                <Input
+                  id="file-upload"
+                  type="file"
+                  accept=".docx,.pdf,.txt"
+                  className="font-body border-input focus:ring-primary file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                  {...correctionForm.register("file")}
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                />
+              </div>
+              {selectedFileName && (
+                <p className="text-sm text-muted-foreground font-body flex items-center mt-1">
+                  <FileText className="mr-2 h-4 w-4 text-primary" /> নির্বাচিত ফাইল: {selectedFileName}
+                </p>
+              )}
+               {correctionForm.formState.errors.file && (
+                <p className="text-sm text-destructive font-body flex items-center">
+                  <AlertCircle className="mr-1 h-4 w-4" /> {correctionForm.formState.errors.file.message}
+                </p>
+              )}
+            </div>
+
+
             <div className="space-y-2">
               <Label htmlFor="tone" className="font-body">লেখার ধরণ</Label>
               <Controller
@@ -242,10 +322,15 @@ export function BanglaCorrectorForm() {
         </form>
       </Card>
 
-      { (correctionFormState.result || correctionFormState.error) && (
+      { (correctionFormState.result || correctionFormState.error || processedSourceText) && (
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle className="font-headline text-2xl">ফলাফল</CardTitle>
+            {processedSourceText && (
+              <CardDescription className="font-body text-sm text-muted-foreground">
+                {processedSourceText}
+              </CardDescription>
+            )}
           </CardHeader>
           <CardContent className="space-y-6">
             {correctionFormState.error && !correctionFormState.result && (
@@ -317,7 +402,7 @@ export function BanglaCorrectorForm() {
           <form 
             onSubmit={toneAdjustForm.handleSubmit((data) => {
                 const formData = new FormData();
-                formData.append("textToAdjust", correctedText); // Pass the corrected text
+                formData.append("textToAdjust", correctedText); 
                 formData.append("newTone", data.newTone);
                 adjustToneFormAction(formData);
             })}
@@ -393,10 +478,11 @@ export function BanglaCorrectorForm() {
                 />
               </div>
               <Button variant="outline" onClick={() => {
-                setToneAdjustedText(undefined); // Clear adjusted text to allow re-adjustment or new correction
-                toneAdjustForm.reset(); // Reset tone adjustment form
+                setToneAdjustedText(undefined); 
+                toneAdjustForm.reset(); 
+                // Do not clear correctedText here, so user can try another tone for the same corrected text
               }}>
-                অন্য টোন চেষ্টা করুন / নতুন সংশোধন করুন
+                অন্য টোন চেষ্টা করুন
               </Button>
           </CardContent>
         </Card>
@@ -405,3 +491,4 @@ export function BanglaCorrectorForm() {
     </div>
   );
 }
+
