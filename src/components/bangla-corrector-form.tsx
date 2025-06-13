@@ -1,8 +1,8 @@
 
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useState, useEffect, useRef, useActionState } from "react";
+import { useFormStatus } from "react-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
@@ -89,12 +89,12 @@ export function BanglaCorrectorForm() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
   
-  const [correctionFormState, correctionFormAction] = useFormState<CorrectTextFormState, FormData>(
+  const [correctionFormState, correctionFormAction] = useActionState<CorrectTextFormState, FormData>(
     handleCorrectText,
     { message: "", error: undefined, result: undefined, originalText: undefined }
   );
 
-  const [adjustToneFormState, adjustToneFormAction] = useFormState<AdjustToneFormState, FormData>(
+  const [adjustToneFormState, adjustToneFormAction] = useActionState<AdjustToneFormState, FormData>(
     handleAdjustTone,
     { message: "", error: undefined, result: undefined }
   );
@@ -141,6 +141,7 @@ export function BanglaCorrectorForm() {
         fileInputRef.current.value = "";
       }
       setSelectedFileName(null);
+      correctionForm.reset({ text: "", tone: correctionForm.getValues("tone") }); // Reset text and file input fields
     }
     if (correctionFormState.error) {
        toast({
@@ -221,8 +222,13 @@ export function BanglaCorrectorForm() {
     if (fileInputRef.current?.files && fileInputRef.current.files[0]) {
       formData.append("file", fileInputRef.current.files[0]);
     } else if (!data.text) {
-      correctionForm.setError("text", { type: "manual", message: "অনুগ্রহ করে টেক্সট লিখুন অথবা একটি ফাইল আপলোড করুন।" });
-      return;
+      // This case should ideally be caught by Zod, but as a fallback:
+      toast({
+        variant: "destructive",
+        title: "ইনপুট প্রয়োজন",
+        description: "অনুগ্রহ করে টেক্সট লিখুন অথবা একটি ফাইল আপলোড করুন।",
+      });
+      return; // Prevent form action if no text and no file
     }
     
     setCorrectedText(undefined);
@@ -234,18 +240,21 @@ export function BanglaCorrectorForm() {
     correctionFormAction(formData);
   };
 
+
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
       setSelectedFileName(event.target.files[0].name);
+      correctionForm.setValue("text", ""); // Clear text input if file is selected
+      correctionForm.clearErrors("text"); // Clear text validation error
     } else {
       setSelectedFileName(null);
     }
   };
 
   const handleClearInputs = () => {
-    correctionForm.reset({ text: "", tone: correctionForm.getValues("tone") });
+    correctionForm.reset({ text: "", tone: correctionForm.getValues("tone"), file: undefined });
     if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+      fileInputRef.current.value = ""; // Also reset the actual file input element
     }
     setSelectedFileName(null);
     correctionForm.clearErrors(); // Clear any existing validation errors
@@ -275,8 +284,9 @@ export function BanglaCorrectorForm() {
                 placeholder="এখানে আপনার বাংলা লেখা লিখুন..."
                 className="min-h-[150px] font-body text-base border-input focus:ring-primary"
                 rows={6}
+                disabled={!!selectedFileName} // Disable textarea if a file is selected
               />
-              {correctionForm.formState.errors.text && (
+              {correctionForm.formState.errors.text && !selectedFileName && ( // Only show text error if no file is selected
                 <p className="text-sm text-destructive font-body flex items-center">
                   <AlertCircle className="mr-1 h-4 w-4" /> {correctionForm.formState.errors.text.message}
                 </p>
@@ -290,14 +300,24 @@ export function BanglaCorrectorForm() {
             <div className="space-y-2">
               <Label htmlFor="file-upload" className="font-body">ফাইল আপলোড করুন (.docx, .pdf, .txt)</Label>
               <div className="flex items-center space-x-2">
-                <Input
-                  id="file-upload"
-                  type="file"
-                  accept=".docx,.pdf,.txt"
-                  className="font-body border-input focus:ring-primary file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
-                  {...correctionForm.register("file")}
-                  ref={fileInputRef}
-                  onChange={handleFileChange}
+                <Controller
+                    name="file"
+                    control={correctionForm.control}
+                    render={({ field: { onChange, onBlur, name, ref } }) => (
+                        <Input
+                            id="file-upload"
+                            type="file"
+                            accept=".docx,.pdf,.txt"
+                            className="font-body border-input focus:ring-primary file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                            ref={fileInputRef} // Keep your original ref for direct manipulation
+                            name={name}
+                            onBlur={onBlur}
+                            onChange={(e) => {
+                                onChange(e.target.files); // RHF expects FileList
+                                handleFileChange(e); // Your original handler
+                            }}
+                        />
+                    )}
                 />
               </div>
               {selectedFileName && (
@@ -418,8 +438,8 @@ export function BanglaCorrectorForm() {
               <div className="space-y-2">
                 <Label className="font-body text-lg flex items-center"><Info className="mr-2 h-5 w-5 text-accent-foreground" /> ব্যাখ্যা</Label>
                 <div className="p-4 rounded-md bg-muted/30 border border-input font-body text-sm">
-                  {explanation.split('\n').map((line, index) => (
-                    <p key={index} className={cn(line.match(/^\d+\./) ? "mt-1" : "")}>{line}</p>
+                  {explanation.split('\\n').map((line, index) => ( // Use double backslash for \n in string literal
+                    <p key={index} className={cn(line.match(/^\\d+\\./) ? "mt-1" : "")}>{line.replace(/^"|"$/g, '')}</p>
                   ))}
                 </div>
               </div>
@@ -507,7 +527,7 @@ export function BanglaCorrectorForm() {
           <CardContent className="space-y-4">
              <div className="space-y-2">
                 <div className="flex justify-between items-center">
-                  <Label htmlFor="toneAdjustedTextOutput" className="font-body text-lg">চূড়ান্ত লেখা (টোন পরিবর্তিত)</Label>
+                  <Label htmlFor="toneAdjustedTextOutput" className="font-body text-lg"> চূড়ান্ত লেখা (টোন পরিবর্তিত)</Label>
                   <div className="flex space-x-2">
                     <Button
                       variant="ghost"
